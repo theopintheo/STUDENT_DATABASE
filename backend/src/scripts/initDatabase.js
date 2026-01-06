@@ -43,13 +43,12 @@ const initDatabase = async () => {
         // Create Default Admin User
         console.log('👨‍💼 Creating default admin user...');
         
-        const hashedPassword = await bcrypt.hash('admin123', 10);
-        const adminPermissions = getPermissionsByRole('admin');
+       const adminPermissions = getPermissionsByRole('admin');
         
         const adminUser = await User.create({
             username: 'admin',
             email: 'admin@edumanage.com',
-            password: hashedPassword,
+            password: 'admin@123',
             role: 'admin',
             profile: {
                 firstName: 'System',

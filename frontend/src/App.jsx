@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from 'react-query';
 import { Toaster } from 'react-hot-toast';
 import './App.css';
 
@@ -37,6 +38,8 @@ const LoadingSpinner = () => (
     `}</style>
   </div>
 );
+const queryClient = new QueryClient();
+
 
 // Lazy load pages for better performance
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
@@ -102,6 +105,7 @@ class RouteErrorBoundary extends React.Component {
 
 function App() {
   return (
+    <QueryClientProvider client={queryClient}>
     <Router>
       <AuthProvider>
         <PermissionProvider>
@@ -230,6 +234,7 @@ function App() {
         </PermissionProvider>
       </AuthProvider>
     </Router>
+    </QueryClientProvider>
   );
 }
 
