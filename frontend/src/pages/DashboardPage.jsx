@@ -13,6 +13,8 @@ import RecentActivity from '../components/dashboard/RecentActivity';
 import './DashboardPage.css';
 
 const DashboardPage = () => {
+  return(<><KPICard/><StatsCard/><RecentActivity/><h3>hello sir</h3></>)
+  
   // ... rest of the component code remains the same
 };
 export default DashboardPage;

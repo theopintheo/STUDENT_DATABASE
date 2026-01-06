@@ -3,6 +3,7 @@ import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
 import './Layout.css';
+import { Outlet } from 'react-router-dom';
 
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -25,7 +26,7 @@ const Layout = ({ children }) => {
       <div className={`layout-main ${sidebarOpen ? 'full-width' : ''}`}>
         <Navbar onToggleSidebar={toggleSidebar} />
         <div className="layout-content">
-          {children}
+          {children || <Outlet />}
         </div>
         <Footer />
       </div>
