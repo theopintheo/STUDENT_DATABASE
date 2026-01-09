@@ -1,9 +1,8 @@
 import React from 'react';
 import { useQuery } from 'react-query';
-import { BarChart, LineChart, PieChart } from '../components/common/Charts';
+import { LineChart, PieChart } from '../components/common/Charts';
 import { getDashboardStats, getChartData } from '../services/analyticsService';
 import {
-  AcademicCapIcon,
   CurrencyRupeeIcon,
   ArrowTrendingUpIcon,
   UsersIcon,
@@ -93,7 +92,7 @@ const DashboardPage = () => {
     {
       title: 'Total Students',
       value: stats.totalStudents || 0, // Directly use stats property
-      icon: <UsersIcon className="h-8 w-8 text-blue-500" />,
+      icon: <UsersIcon style={{height:"15px",width:"10px"}} />,
       color: 'blue',
       change: '+12%',
       description: 'From last month'
@@ -101,7 +100,7 @@ const DashboardPage = () => {
     {
       title: 'Active Courses',
       value: stats.totalCourses || 0, // Directly use stats property
-      icon: <BookOpenIcon className="h-8 w-8 text-green-500" />,
+      icon: <BookOpenIcon style={{height:"15px",width:"10px"}} />,
       color: 'green',
       change: '+5%',
       description: 'From last month'
@@ -109,7 +108,7 @@ const DashboardPage = () => {
     {
       title: 'Total Revenue',
       value: `₹${(stats.totalRevenue || 0).toLocaleString('en-IN')}`, // Directly use stats property
-      icon: <CurrencyRupeeIcon className="h-8 w-8 text-yellow-500" />,
+      icon: <CurrencyRupeeIcon style={{height:"15px",width:"10px"}} />,
       color: 'yellow',
       change: '+18%',
       description: 'From last month'
@@ -117,7 +116,7 @@ const DashboardPage = () => {
     {
       title: 'Pending Payments',
       value: stats.pendingPayments || 0, // Directly use stats property
-      icon: <ClockIcon className="h-8 w-8 text-red-500" />,
+      icon: <ClockIcon style={{height:"15px",width:"10px"}} />,
       color: 'red',
       change: '-3%',
       description: 'From last month'
@@ -171,7 +170,7 @@ const DashboardPage = () => {
                   {stat.value}
                 </p>
                 <div className="flex items-center mt-2">
-                  <ArrowTrendingUpIcon className="h-4 w-4 text-green-500 mr-1" />
+                  <ArrowTrendingUpIcon style={{height:"15px",width:"10px"}} />
                   <span className="metric-badge positive">{stat.change}</span>
                   <span className="text-gray-500 text-sm ml-2">{stat.description}</span>
                 </div>
@@ -194,7 +193,7 @@ const DashboardPage = () => {
         <div className="chart-container p-6 bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-semibold text-gray-900">Enrollment Trends</h2>
-            <ChartBarIcon className="h-5 w-5 text-gray-400" />
+            <ChartBarIcon style={{height:"15px",width:"10px"}}/>
           </div>
           {chartsLoading ? (
             <div className="h-64 flex items-center justify-center">
@@ -216,7 +215,7 @@ const DashboardPage = () => {
         <div className="chart-container p-6 bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-semibold text-gray-900">Revenue Breakdown</h2>
-            <ChartPieIcon className="h-5 w-5 text-gray-400" />
+            <ChartPieIcon style={{height:"15px",width:"10px"}} />
           </div>
           {chartsLoading ? (
             <div className="h-64 flex items-center justify-center">
@@ -243,7 +242,7 @@ const DashboardPage = () => {
             <div key={activity.id} className="activity-item flex items-center p-4 hover:bg-gray-50 rounded-lg transition">
               <div className="flex-shrink-0">
                 <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <UsersIcon className="h-5 w-5 text-blue-600" />
+                  <UsersIcon className=''/>
                 </div>
               </div>
               <div className="ml-4 flex-1">
