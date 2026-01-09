@@ -1,9 +1,8 @@
 import React from 'react';
 import { useQuery } from 'react-query';
-import { BarChart, LineChart, PieChart } from '../components/common/Charts';
+import { LineChart, PieChart } from '../components/common/Charts';
 import { getDashboardStats, getChartData } from '../services/analyticsService';
 import {
-  AcademicCapIcon,
   CurrencyRupeeIcon,
   ArrowTrendingUpIcon,
   UsersIcon,

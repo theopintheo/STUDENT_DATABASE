@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { PlusIcon, MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import { PlusIcon } from '@heroicons/react/24/outline';
 import DataTable from '../components/common/Table/DataTable';
 import LeadFilters from '../components/leads/LeadFilters';
 import JoinLeadModal from '../components/common/Modal/JoinLeadModal';
@@ -38,6 +38,12 @@ const LeadsPage = () => {
       }
     }
   );
+
+  const handleViewLead = React.useCallback((lead) => {
+    console.log('View lead:', lead);
+    setSelectedLead(lead);
+    setShowJoinModal(true);
+  }, [setSelectedLead, setShowJoinModal]);
 
   const columns = React.useMemo(
     () => [
@@ -128,13 +134,8 @@ const LeadsPage = () => {
         ),
       },
     ],
-    []
+    [updateStatusMutation, handleViewLead]
   );
-
-  const handleViewLead = (lead) => {
-    // Implement lead view logic
-    console.log('View lead:', lead);
-  };
 
   const handleFilterChange = (newFilters) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
