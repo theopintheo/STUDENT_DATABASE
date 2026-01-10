@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Filter, Calendar, Search } from 'lucide-react';
+import { Filter, Search } from 'lucide-react';
 
 const LeadFilters = ({ onFilterChange, initialFilters = {} }) => {
   const [filters, setFilters] = useState({

@@ -1,8 +1,6 @@
 // src/index.js - TEMPORARY DEBUG VERSION
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import './index.css';
 
 // Create a wrapper to catch errors
@@ -37,18 +35,13 @@ const ErrorCatcher = ({ children }) => {
 // Import your App
 const App = React.lazy(() => import('./App'));
 
-const queryClient = new QueryClient();
-
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ErrorCatcher>
-        <React.Suspense fallback="Loading...">
-          <App />
-        </React.Suspense>
-      </ErrorCatcher>
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
+    <ErrorCatcher>
+      <React.Suspense fallback="Loading...">
+        <App />
+      </React.Suspense>
+    </ErrorCatcher>
   </React.StrictMode>
 );

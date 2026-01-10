@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { LineChart, PieChart } from '../components/common/Charts';
 import { getDashboardStats, getChartData } from '../services/analyticsService';
 import {
@@ -20,14 +20,20 @@ const DashboardPage = () => {
     isLoading: statsLoading, 
     error: statsError,
     isError: statsIsError
-  } = useQuery('dashboardStats', getDashboardStats);
+  } = useQuery({
+    queryKey: ['dashboardStats'],
+    queryFn: () => getDashboardStats(),
+  });
 
   // Fetch chart data
   const { 
     data: chartsResponse, 
     isLoading: chartsLoading,
     isError: chartsIsError
-  } = useQuery('chartData', getChartData);
+  } = useQuery({
+    queryKey: ['chartData'],
+    queryFn: () => getChartData(),
+  });
 
   // Extract JUST the data from responses, not the entire response object
   // The error is because you're trying to render {success: true, data: {...}}

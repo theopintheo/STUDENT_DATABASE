@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import DataTable from '../components/common/Table/DataTable';
 import LeadFilters from '../components/leads/LeadFilters';
@@ -19,25 +19,38 @@ const LeadsPage = () => {
   const [selectedLead, setSelectedLead] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: leads, isLoading } = useQuery(
-    ['leads', filters],
-    () => leadService.getAllLeads(filters)
-  );
+  const { data: leads, isLoading } = useQuery({
+    queryKey: ['leads', filters],
+    queryFn: () => leadService.getAllLeads(filters),
+  });
 
-  const { data: stats } = useQuery('leadStats', leadService.getLeadStats);
+  const { data: stats } = useQuery({
+    queryKey: ['leadStats'],
+    queryFn: () => leadService.getLeadStats(),
+  });
 
-  const updateStatusMutation = useMutation(
-    ({ id, status }) => leadService.updateLeadStatus(id, status),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries(['leads', filters]);
-        toast.success('Lead status updated');
-      },
-      onError: (error) => {
-        toast.error(error.message || 'Update failed');
-      }
+  // Normalize responses so components always get expected shapes
+  const leadRows = React.useMemo(() => {
+    if (!leads) return [];
+    if (Array.isArray(leads)) return leads;
+    if (Array.isArray(leads.data)) return leads.data;
+    // Handle nested responses like { success: true, data: { data: [...] } }
+    if (leads.data && Array.isArray(leads.data.data)) return leads.data.data;
+    return [];
+  }, [leads]);
+
+  const statsObj = React.useMemo(() => (stats && (stats.data ?? stats)) || {}, [stats]);
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }) => leadService.updateLeadStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['leads', filters]);
+      toast.success('Lead status updated');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Update failed');
     }
-  );
+  });
 
   const handleViewLead = React.useCallback((lead) => {
     console.log('View lead:', lead);
@@ -173,7 +186,7 @@ const LeadsPage = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {stats && Object.entries(stats).map(([key, value]) => (
+        {statsObj && Object.entries(statsObj).map(([key, value]) => (
           <div key={key} className="bg-white p-4 rounded-lg shadow">
             <div className="text-sm font-medium text-gray-500 capitalize">
               {key.replace(/([A-Z])/g, ' $1').trim()}
@@ -194,7 +207,7 @@ const LeadsPage = () => {
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <DataTable
           columns={columns}
-          data={leads || []}
+          data={leadRows}
           isLoading={isLoading}
           onRowClick={handleViewLead}
         />
