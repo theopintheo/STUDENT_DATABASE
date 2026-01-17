@@ -10,15 +10,15 @@ import toast from 'react-hot-toast';
 import StudentFilters from '../components/students/StudentFilters';
 const StudentPage = () => {
   const [filters, setFilters] = useState({
-  search: '',
-  status: '',
-  branch: '',
-  startDate: '',
-  endDate: '',
-  admissionType: '',
-  course: '',
-  feeStatus: ''
-});
+    search: '',
+    status: '',
+    branch: '',
+    startDate: '',
+    endDate: '',
+    admissionType: '',
+    course: '',
+    feeStatus: ''
+  });
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedstudent, setSelectedstudent] = useState(null);
@@ -33,16 +33,16 @@ const StudentPage = () => {
   // Fetch stats
   const { data: statsResponse } = useQuery({
     queryKey: ['studentStats'],
-    queryFn: () =>studentService.getLeadStats(),
+    queryFn: () => studentService.getLeadStats(),
   });
 
   // Transform API response to match component expectations
   const studentRows = useMemo(() => {
     if (!studentsResponse) return [];
-    
+
     // Handle different response formats
     const response = studentsResponse.data || studentsResponse;
-    
+
     if (Array.isArray(response)) {
       return response.map(student => ({
         ...student,
@@ -55,7 +55,7 @@ const StudentPage = () => {
         createdAt: student.createdAt || student.meta?.createdAt || new Date().toISOString()
       }));
     }
-    
+
     return [];
   }, [studentsResponse]);
 
@@ -210,13 +210,13 @@ const StudentPage = () => {
   }, [queryClient, filters]);
 
   // Add this inside your StudentPage component, before the return statement
-const handleLeadSuccess = useCallback(() => {
-  setShowJoinModal(false);
-  // Refresh the data
-  queryClient.invalidateQueries(['students', filters]);
-  queryClient.invalidateQueries(['studentStats']);
-  toast.success('Lead processed successfully');
-}, [queryClient, filters]);
+  const handleLeadSuccess = useCallback(() => {
+    setShowJoinModal(false);
+    // Refresh the data
+    queryClient.invalidateQueries(['students', filters]);
+    queryClient.invalidateQueries(['studentStats']);
+    toast.success('Lead processed successfully');
+  }, [queryClient, filters]);
 
   return (
     <div className="space-y-6 students-page">
@@ -257,7 +257,7 @@ const handleLeadSuccess = useCallback(() => {
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow students-filters">
-        <studentFilters filters={filters} onFilterChange={handleFilterChange} />
+        <StudentFilters filters={filters} onFilterChange={handleFilterChange} />
       </div>
 
       {/* Table */}

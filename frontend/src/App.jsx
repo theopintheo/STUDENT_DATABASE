@@ -44,8 +44,8 @@ const queryClient = new QueryClient();
 // Lazy load pages for better performance
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
-const LeadsPage = lazy(() => import('./pages/studentPage'));
-const StudentsPage = lazy(() => import('./pages/LeadsPage'));
+const StudentPage = lazy(() => import('./pages/StudentPage'));
+const LeadsPage = lazy(() => import('./pages/LeadsPage'));
 const CoursesPage = lazy(() => import('./pages/CoursesPage'));
 const EnrollmentsPage = lazy(() => import('./pages/EnrollmentsPage'));
 const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
@@ -106,134 +106,134 @@ class RouteErrorBoundary extends React.Component {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-    <Router>
-      <AuthProvider>
-        <PermissionProvider>
-          {/* Toast Notifications */}
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#363636',
-                color: '#fff',
-              },
-              success: {
-                duration: 3000,
-                iconTheme: {
-                  primary: '#10b981',
-                  secondary: '#fff',
+      <Router>
+        <AuthProvider>
+          <PermissionProvider>
+            {/* Toast Notifications */}
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: '#363636',
+                  color: '#fff',
                 },
-              },
-              error: {
-                duration: 5000,
-                iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#fff',
+                success: {
+                  duration: 3000,
+                  iconTheme: {
+                    primary: '#10b981',
+                    secondary: '#fff',
+                  },
                 },
-              },
-            }}
-          />
-          
-          <Suspense fallback={<LoadingSpinner />}>
-            <Routes>
-              {/* Public Routes - Authentication */}
-              <Route element={<AuthLayout />}>
-                <Route path="/login" element={<LoginPage />} />
-              </Route>
+                error: {
+                  duration: 5000,
+                  iconTheme: {
+                    primary: '#ef4444',
+                    secondary: '#fff',
+                  },
+                },
+              }}
+            />
 
-              {/* Protected Routes */}
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Layout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="dashboard" element={
-                  <RouteErrorBoundary>
-                    <DashboardPage />
-                  </RouteErrorBoundary>
-                } />
-                <Route path="students" element={
-                  <RouteErrorBoundary>
-                    <LeadsPage />
-                  </RouteErrorBoundary>
-                } />
-                <Route path="Leads" element={
-                  <RouteErrorBoundary>
-                    <StudentsPage />
-                  </RouteErrorBoundary>
-                } />
-                <Route path="courses" element={
-                  <RouteErrorBoundary>
-                    <CoursesPage />
-                  </RouteErrorBoundary>
-                } />
-                <Route path="enrollments" element={
-                  <RouteErrorBoundary>
-                    <EnrollmentsPage />
-                  </RouteErrorBoundary>
-                } />
-                <Route path="payments" element={
-                  <RouteErrorBoundary>
-                    <PaymentsPage />
-                  </RouteErrorBoundary>
-                } />
-                <Route path="attendance" element={
-                  <RouteErrorBoundary>
-                    <AttendancePage />
-                  </RouteErrorBoundary>
-                } />
-                <Route path="content" element={
-                  <RouteErrorBoundary>
-                    <ContentPage />
-                  </RouteErrorBoundary>
-                } />
-                <Route path="users" element={
-                  <RouteErrorBoundary>
-                    <UsersPage />
-                  </RouteErrorBoundary>
-                } />
-                <Route path="profile" element={
-                  <RouteErrorBoundary>
-                    <ProfilePage />
-                  </RouteErrorBoundary>
-                } />
-              </Route>
+            <Suspense fallback={<LoadingSpinner />}>
+              <Routes>
+                {/* Public Routes - Authentication */}
+                <Route element={<AuthLayout />}>
+                  <Route path="/login" element={<LoginPage />} />
+                </Route>
 
-              {/* 404 Route */}
-              <Route path="*" element={
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  height: '100vh',
-                  flexDirection: 'column'
-                }}>
-                  <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>404</h1>
-                  <p style={{ marginBottom: '2rem' }}>Page not found</p>
-                  <a
-                    href="/"
-                    style={{
-                      padding: '0.75rem 1.5rem',
-                      backgroundColor: '#667eea',
-                      color: 'white',
-                      borderRadius: '4px',
-                      textDecoration: 'none'
-                    }}
-                  >
-                    Go to Dashboard
-                  </a>
-                </div>
-              } />
-            </Routes>
-          </Suspense>
-        </PermissionProvider>
-      </AuthProvider>
-    </Router>
+                {/* Protected Routes */}
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <Layout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<Navigate to="/dashboard" replace />} />
+                  <Route path="dashboard" element={
+                    <RouteErrorBoundary>
+                      <DashboardPage />
+                    </RouteErrorBoundary>
+                  } />
+                  <Route path="students" element={
+                    <RouteErrorBoundary>
+                      <StudentPage />
+                    </RouteErrorBoundary>
+                  } />
+                  <Route path="Leads" element={
+                    <RouteErrorBoundary>
+                      <LeadsPage />
+                    </RouteErrorBoundary>
+                  } />
+                  <Route path="courses" element={
+                    <RouteErrorBoundary>
+                      <CoursesPage />
+                    </RouteErrorBoundary>
+                  } />
+                  <Route path="enrollments" element={
+                    <RouteErrorBoundary>
+                      <EnrollmentsPage />
+                    </RouteErrorBoundary>
+                  } />
+                  <Route path="payments" element={
+                    <RouteErrorBoundary>
+                      <PaymentsPage />
+                    </RouteErrorBoundary>
+                  } />
+                  <Route path="attendance" element={
+                    <RouteErrorBoundary>
+                      <AttendancePage />
+                    </RouteErrorBoundary>
+                  } />
+                  <Route path="content" element={
+                    <RouteErrorBoundary>
+                      <ContentPage />
+                    </RouteErrorBoundary>
+                  } />
+                  <Route path="users" element={
+                    <RouteErrorBoundary>
+                      <UsersPage />
+                    </RouteErrorBoundary>
+                  } />
+                  <Route path="profile" element={
+                    <RouteErrorBoundary>
+                      <ProfilePage />
+                    </RouteErrorBoundary>
+                  } />
+                </Route>
+
+                {/* 404 Route */}
+                <Route path="*" element={
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    height: '100vh',
+                    flexDirection: 'column'
+                  }}>
+                    <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>404</h1>
+                    <p style={{ marginBottom: '2rem' }}>Page not found</p>
+                    <a
+                      href="/"
+                      style={{
+                        padding: '0.75rem 1.5rem',
+                        backgroundColor: '#667eea',
+                        color: 'white',
+                        borderRadius: '4px',
+                        textDecoration: 'none'
+                      }}
+                    >
+                      Go to Dashboard
+                    </a>
+                  </div>
+                } />
+              </Routes>
+            </Suspense>
+          </PermissionProvider>
+        </AuthProvider>
+      </Router>
     </QueryClientProvider>
   );
 }

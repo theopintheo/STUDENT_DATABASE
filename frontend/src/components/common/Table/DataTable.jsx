@@ -1,48 +1,108 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useTable, useRowSelect } from 'react-table';
 import './data-table.css';
 
-const DataTable = ({ columns = [], data = [], onRowClick }) => {
+const DataTable = ({
+  columns = [],
+  data = [],
+  onRowClick,
+  onRowSelectionChange,
+  isLoading,
+  emptyMessage = "No records found"
+}) => {
+  const {
+    getTableProps,
+    getTableBodyProps,
+    headerGroups,
+    rows,
+    prepareRow,
+    selectedFlatRows,
+    getToggleAllRowsSelectedProps,
+  } = useTable(
+    {
+      columns,
+      data,
+    },
+    useRowSelect
+  );
+
+  // Notify parent of selection changes
+  useEffect(() => {
+    if (onRowSelectionChange) {
+      onRowSelectionChange(selectedFlatRows);
+    }
+  }, [selectedFlatRows, onRowSelectionChange]);
+
+  if (isLoading) {
+    return (
+      <div className="table-wrapper">
+        <table className="data-table">
+          <thead>
+            <tr>
+              {columns.map((column, i) => (
+                <th key={i}>{typeof column.Header === 'string' ? column.Header : ''}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colSpan={columns.length} className="text-center py-4">
+                Loading...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   return (
     <div className="table-wrapper">
-      <table className="data-table">
+      <table {...getTableProps()} className="data-table">
         <thead>
-          <tr>
-            {columns.map((column, idx) => (
-              <th key={column.accessor ?? column.Header ?? idx}>{column.Header ?? column.header ?? ''}</th>
-            ))}
-          </tr>
+          {headerGroups.map(headerGroup => (
+            <tr {...headerGroup.getHeaderGroupProps()}>
+              {headerGroup.headers.map(column => (
+                <th {...column.getHeaderProps()}>
+                  {column.render('Header', {
+                    getToggleAllPageRowsSelectedProps: getToggleAllRowsSelectedProps
+                  })}
+                </th>
+              ))}
+            </tr>
+          ))}
         </thead>
-        <tbody>
-          {data && data.length ? (
-            data.map((row, rowIndex) => (
-              <tr key={row.id ?? row._id ?? rowIndex} onClick={() => onRowClick && onRowClick(row)}>
-                {columns.map((column, colIndex) => {
-                  const key = column.accessor ?? column.Header ?? colIndex;
-                  const value = column.accessor ? row[column.accessor] : undefined;
-
-                  // If a custom Cell renderer is provided, call it with a shape similar to react-table
-                  if (typeof column.Cell === 'function') {
-                    try {
-                      return (
-                        <td key={key}>
-                          {column.Cell({ row: { original: row }, value })}
-                        </td>
-                      );
-                    } catch (err) {
-                      // Avoid throwing during render; render a fallback and log
-                      console.error('Error rendering cell:', err);
-                      return <td key={key}>-</td>;
+        <tbody {...getTableBodyProps()}>
+          {rows.length > 0 ? (
+            rows.map(row => {
+              prepareRow(row);
+              return (
+                <tr
+                  {...row.getRowProps()}
+                  onClick={(e) => {
+                    // Prevent row click when clicking interactive elements
+                    if (e.target.closest('input[type="checkbox"]') ||
+                      e.target.closest('button') ||
+                      e.target.closest('a') ||
+                      e.target.closest('select')) {
+                      return;
                     }
-                  }
-
-                  return <td key={key}>{value ?? ''}</td>;
-                })}
-              </tr>
-            ))
+                    onRowClick && onRowClick(row.original);
+                  }}
+                  className={onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
+                >
+                  {row.cells.map(cell => (
+                    <td {...cell.getCellProps()}>
+                      {cell.render('Cell')}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })
           ) : (
             <tr>
-              <td className="empty-state" colSpan={columns.length || 1}>
-                No records found
+              <td className="empty-state" colSpan={columns.length}>
+                {emptyMessage}
               </td>
             </tr>
           )}
