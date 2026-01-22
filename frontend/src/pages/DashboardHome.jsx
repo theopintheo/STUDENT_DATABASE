@@ -64,7 +64,15 @@ const DashboardHome = () => {
             });
             setRecentActivity(recentActivity);
             setUpcomingReminders(upcomingReminders || []);
-            setCourseData(studentData);
+            // Fallback data for Popular Facilities if DB is empty
+            const fallbackCourseData = [
+                { name: 'Full Stack Dev', count: 35 },
+                { name: 'Data Science', count: 28 },
+                { name: 'UI/UX Design', count: 22 },
+                { name: 'Cyber Security', count: 18 },
+                { name: 'Digital Marketing', count: 15 }
+            ];
+            setCourseData(studentData && studentData.length > 0 ? studentData : fallbackCourseData);
             setEngagementData(engagementData);
         } catch (err) {
             console.error("Error fetching dashboard data:", err);

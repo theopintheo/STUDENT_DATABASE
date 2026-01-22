@@ -5,8 +5,9 @@ import { Home, Users, Share2, LogOut, UserPlus } from 'lucide-react';
 const Sidebar = ({ isOpen, onClose }) => {
     const navItems = [
         { name: 'Home', icon: Home, path: '/dashboard' },
-        { name: 'Student Details', icon: Users, path: '/students' },
         { name: 'Leads', icon: UserPlus, path: '/leads' },
+        { name: 'Student Details', icon: Users, path: '/students' },
+
         { name: 'Share Platform', icon: Share2, path: '/share' },
     ];
 
@@ -21,20 +22,9 @@ const Sidebar = ({ isOpen, onClose }) => {
 
     return (
         <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0d1210] border-r border-white/5 flex flex-col transition-transform duration-300 transform lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-            {/* Profile Section */}
-            <div className="flex items-center px-8 py-10">
-                <div className="relative">
-                    <img
-                        src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
-                        alt="Admin"
-                        className="w-12 h-12 rounded-xl bg-slate-800"
-                    />
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-4 border-[#0d1210] rounded-full"></div>
-                </div>
-                <div className="ml-4">
-                    <h3 className="text-white font-bold text-sm leading-tight">Admin</h3>
-                    <p className="text-slate-500 text-xs">Dashboard</p>
-                </div>
+            <div className="px-8 py-10">
+                <h3 className="text-white font-bold text-sm leading-tight">Admin</h3>
+                <p className="text-slate-500 text-xs">Dashboard</p>
             </div>
 
             <nav className="flex-1 px-4 space-y-1">

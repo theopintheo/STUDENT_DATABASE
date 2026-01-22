@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Filter, Download, Edit2, Trash2, Eye, UserPlus, GraduationCap, Banknote, Sparkles, CheckCircle2, Wallet, Check, X, Calendar, MapPin, Activity, DollarSign, Award } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Plus, Filter, Download, Edit2, Trash2, Eye, UserPlus, GraduationCap, Banknote, Sparkles, CheckCircle2, Wallet, Check, X, Calendar, MapPin, Activity, DollarSign, Award, Users } from 'lucide-react';
 import Modal from '../components/Modal';
 import { studentAPI, courseAPI } from '../api';
 
 
 const LeadsPage = () => {
+    const navigate = useNavigate();
     const [students, setStudents] = useState([]);
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -18,7 +20,7 @@ const LeadsPage = () => {
 
     // Form State
     const [formData, setFormData] = useState({
-        name: '', email: '', phone: '', course: '', reply: 'Interested', additionalInfo: '', reminderDate: '', remind: false
+        name: '', email: '', phone: '', course: '', reply: 'Interested', additionalInfo: '', reminderDate: '', remind: false, gender: 'Male'
     });
 
     // Admit Form State
@@ -57,7 +59,7 @@ const LeadsPage = () => {
     };
 
     const handleAdd = () => {
-        setFormData({ name: '', email: '', phone: '', course: '', reply: 'Interested', additionalInfo: '', reminderDate: '', remind: false });
+        setFormData({ name: '', email: '', phone: '', course: '', reply: 'Interested', additionalInfo: '', reminderDate: '', remind: false, gender: 'Male' });
         setIsAddModalOpen(true);
     };
 
@@ -105,8 +107,7 @@ const LeadsPage = () => {
     };
 
     const handleView = (student) => {
-        setSelectedStudent(student);
-        setIsViewModalOpen(true);
+        navigate(`/leads/${student._id}`);
     };
 
     const handleEdit = (student) => {
@@ -199,12 +200,7 @@ const LeadsPage = () => {
                                         {student.createdAt ? new Date(student.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                                     </td>
                                     <td className="px-6 py-6">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-[11px] font-black text-emerald-500 uppercase">
-                                                {student.name ? student.name.split(' ').filter(Boolean).map(n => n[0]).join('') : '?'}
-                                            </div>
-                                            <span className="text-sm font-black text-white uppercase tracking-tight">{student.name || 'Unknown'}</span>
-                                        </div>
+                                        <span className="text-sm font-black text-white uppercase tracking-tight">{student.name || 'Unknown'}</span>
                                     </td>
 
                                     <td className="px-6 py-6 text-sm font-bold text-slate-400 italic">{student.phone}</td>
@@ -315,17 +311,31 @@ const LeadsPage = () => {
                             </select>
                         </div>
                     </div>
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Status</label>
-                        <select
-                            className="input-field"
-                            value={formData.reply || 'Interested'}
-                            onChange={(e) => setFormData({ ...formData, reply: e.target.value })}
-                        >
-                            <option value="Interested">Interested</option>
-                            <option value="Follow-up">Follow-up</option>
-                            <option value="Not Interested">Not Interested</option>
-                        </select>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Gender</label>
+                            <select
+                                className="input-field"
+                                value={formData.gender || 'Male'}
+                                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                            >
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Status</label>
+                            <select
+                                className="input-field"
+                                value={formData.reply || 'Interested'}
+                                onChange={(e) => setFormData({ ...formData, reply: e.target.value })}
+                            >
+                                <option value="Interested">Interested</option>
+                                <option value="Follow-up">Follow-up</option>
+                                <option value="Not Interested">Not Interested</option>
+                            </select>
+                        </div>
                     </div>
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-500 uppercase ml-1">Additional Info</label>
@@ -347,10 +357,7 @@ const LeadsPage = () => {
             <Modal isOpen={isAdmitModalOpen} onClose={() => setIsAdmitModalOpen(false)} title="Convert Lead to Student" maxWidth="max-w-2xl">
                 <form onSubmit={confirmAdmit} className="space-y-10 pb-4">
                     {/* Lead Info Header Card */}
-                    <div className="p-5 rounded-3xl bg-white/2 border border-white/5 flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-xl font-bold border border-emerald-500/20">
-                            {selectedStudent?.name.charAt(0)}
-                        </div>
+                    <div className="p-5 rounded-3xl bg-white/2 border border-white/5">
                         <div>
                             <h4 className="text-xl font-black text-white">{selectedStudent?.name}</h4>
                             <div className="flex items-center gap-2 mt-1">
@@ -491,18 +498,8 @@ const LeadsPage = () => {
                 {selectedStudent && (
                     <div className="p-8 space-y-12 pb-6">
                         {/* Profile Header Block */}
-                        <div className="flex flex-col md:flex-row items-center gap-8 border-b border-white/5 pb-10">
-                            <div className="relative group">
-                                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full blur opacity-25 group-hover:opacity-40 transition-opacity"></div>
-                                <div className="relative w-32 h-32 rounded-full border-4 border-[#0d1210] overflow-hidden bg-slate-800">
-                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedStudent.name}`} alt="" className="w-full h-full object-cover" />
-                                </div>
-                                <div className="absolute bottom-1 right-1 w-8 h-8 bg-emerald-500 border-4 border-[#0d1210] rounded-full flex items-center justify-center">
-                                    <Check className="w-4 h-4 text-white" />
-                                </div>
-                            </div>
-
-                            <div className="flex-1 text-center md:text-left space-y-2">
+                        <div className="border-b border-white/5 pb-10">
+                            <div className="text-center md:text-left space-y-2">
                                 <div className="flex flex-col md:flex-row items-center gap-4">
                                     <h2 className="text-4xl font-black text-white tracking-tight leading-none uppercase">{selectedStudent.name}</h2>
                                     <span className="px-4 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-black uppercase tracking-widest border border-emerald-500/20 flex items-center gap-2">
@@ -575,9 +572,6 @@ const LeadsPage = () => {
                                     <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em]">Referral Info</h4>
                                     <div className="p-4 rounded-3xl bg-white/2 border border-white/5 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full border-2 border-white/10 overflow-hidden bg-slate-800">
-                                                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=Referrer`} alt="" />
-                                            </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Referred By</p>
                                                 <p className="text-sm font-bold text-white uppercase">Direct Inquiry</p>

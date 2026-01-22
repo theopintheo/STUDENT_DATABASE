@@ -14,6 +14,7 @@ export const studentAPI = {
     update: (id, data) => api.put(`/students/${id}`, data),
     delete: (id) => api.delete(`/students/${id}`),
     admit: (id, data) => api.patch(`/students/admit/${id}`, data),
+    getById: (id) => api.get(`/students/${id}`),
 };
 
 export const postAPI = {

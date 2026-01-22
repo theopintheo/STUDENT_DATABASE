@@ -17,4 +17,7 @@ router.delete('/:id', studentController.deleteStudent);
 // ADMIT a lead
 router.patch('/admit/:id', studentController.admitLead);
 
+// GET a single student
+router.get('/:id', studentController.getStudentById);
+
 module.exports = router;

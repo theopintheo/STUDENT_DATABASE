@@ -13,6 +13,7 @@ const StudentSchema = new mongoose.Schema({
     joiningDate: { type: Date },
     fee: { type: Number },
     referralBonus: { type: Number },
+    gender: { type: String, enum: ['Male', 'Female', 'Other'], default: 'Male' },
     referredBy: { type: String }
 }, { timestamps: true });
 

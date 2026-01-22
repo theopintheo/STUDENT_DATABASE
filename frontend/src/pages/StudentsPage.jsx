@@ -1,35 +1,98 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, Eye, Calendar, DollarSign, Award, ThumbsUp, CheckCircle2, MapPin, Activity, Users } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Eye, Calendar, DollarSign, Award, Users, Download, Filter, ChevronDown, Phone, Mail, ChevronLeft, ChevronRight, Activity, MapPin, UserPlus, CheckCircle } from 'lucide-react';
 import Modal from '../components/Modal';
 import { studentAPI } from '../api';
 
-
 const StudentsPage = () => {
     const [students, setStudents] = useState([]);
+    const [leads, setLeads] = useState([]); // State for leads
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(10); // Adjust items per page as needed
+
+    // Modal States
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isLeadSelectionModalOpen, setIsLeadSelectionModalOpen] = useState(false); // New modal
+    const [isAdmitModalOpen, setIsAdmitModalOpen] = useState(false);
+
     const [selectedStudent, setSelectedStudent] = useState(null);
+    const [selectedLeadForAdmit, setSelectedLeadForAdmit] = useState(null);
+
+    // Filters State
+    const [activeTab, setActiveTab] = useState('All Students');
+    const [courseFilter, setCourseFilter] = useState('All Courses');
+    const [dateFilter, setDateFilter] = useState('All Time');
 
     // Edit State
-    const [formData, setFormData] = useState({});
+    const [formData, setFormData] = useState({ gender: 'Male' });
+
+    // Admit/Add State
+    const [admitData, setAdmitData] = useState({
+        fee: '',
+        joiningDate: new Date().toISOString().split('T')[0],
+        referralBonus: '0',
+        referredBy: ''
+    });
 
     useEffect(() => {
-        fetchStudents();
+        fetchData();
     }, []);
 
-    const fetchStudents = async () => {
+    // Reset page on filter change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, activeTab, courseFilter, dateFilter]);
+
+    const fetchData = async () => {
         try {
             setLoading(true);
             const response = await studentAPI.getAll();
-            // Filter only admitted students
+            // Split into students and leads
             setStudents(response.data.filter(s => s.isAdmitted));
+            setLeads(response.data.filter(s => !s.isAdmitted));
         } catch (err) {
-            console.error("Error fetching admitted students:", err);
+            console.error("Error fetching data:", err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleOpenAdd = () => {
+        setIsLeadSelectionModalOpen(true);
+    };
+
+    const handleSelectLead = (lead) => {
+        setSelectedLeadForAdmit(lead);
+        setIsLeadSelectionModalOpen(false);
+        setAdmitData({
+            fee: '',
+            joiningDate: new Date().toISOString().split('T')[0],
+            referralBonus: '0',
+            referredBy: ''
+        });
+        setIsAdmitModalOpen(true);
+    };
+
+    const handleAdmitSubmit = async (e) => {
+        e.preventDefault();
+        if (!selectedLeadForAdmit) return;
+
+        try {
+            await studentAPI.admit(selectedLeadForAdmit._id, {
+                ...admitData,
+                isAdmitted: true,
+                status: 'Active'
+            });
+            fetchData();
+            setIsAdmitModalOpen(false);
+            setSelectedLeadForAdmit(null);
+        } catch (err) {
+            console.error("Error admitting student:", err);
         }
     };
 
@@ -37,7 +100,7 @@ const StudentsPage = () => {
         e.preventDefault();
         try {
             await studentAPI.update(selectedStudent._id, formData);
-            fetchStudents();
+            fetchData();
             setIsEditModalOpen(false);
         } catch (err) {
             console.error("Error updating student:", err);
@@ -47,97 +110,402 @@ const StudentsPage = () => {
     const confirmDelete = async () => {
         try {
             await studentAPI.delete(selectedStudent._id);
-            fetchStudents();
+            fetchData();
             setIsDeleteModalOpen(false);
         } catch (err) {
             console.error("Error deleting student:", err);
         }
     };
 
-    const filteredStudents = students.filter(student =>
-        student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.course?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const handleExport = () => {
+        if (students.length === 0) return;
 
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const isAdmin = user.role === 'admin';
+        const headers = ["ID", "Name", "Email", "Phone", "Course", "Joining Date", "Fee", "Referred By", "Referral Bonus"];
+        const csvContent = [
+            headers.join(","),
+            ...students.map(s => [
+                s._id,
+                `"${s.name}"`,
+                s.email,
+                s.phone,
+                s.course,
+                s.joiningDate ? new Date(s.joiningDate).toLocaleDateString() : '',
+                s.fee,
+                `"${s.referredBy || ''}"`,
+                s.referralBonus
+            ].join(","))
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", "admitted_students.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    };
+
+    // Filter Logic
+    const filteredStudents = students.filter(student => {
+        const matchesSearch =
+            student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.course?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.phone?.includes(searchTerm);
+
+        let matchesTab = true;
+        if (activeTab === 'Pending Fees') {
+            matchesTab = student.fee && student.fee > 0;
+        } else if (activeTab === 'New Joiners') {
+            const joinedDate = new Date(student.joiningDate);
+            const now = new Date();
+            const diffTime = Math.abs(now - joinedDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            matchesTab = diffDays <= 30;
+        } else if (activeTab === 'Referral Bonus Pending') {
+            matchesTab = student.referralBonus && student.referralBonus > 0;
+        }
+
+        let matchesCourse = true;
+        if (courseFilter !== 'All Courses') {
+            matchesCourse = student.course === courseFilter;
+        }
+
+        let matchesDate = true;
+        if (dateFilter === 'This Month') {
+            const joinedDate = new Date(student.joiningDate);
+            const now = new Date();
+            matchesDate = joinedDate.getMonth() === now.getMonth() && joinedDate.getFullYear() === now.getFullYear();
+        }
+
+        return matchesSearch && matchesTab && matchesCourse && matchesDate;
+    });
+
+    // Pagination Logic
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentStudents = filteredStudents ? filteredStudents.slice(indexOfFirstItem, indexOfLastItem) : [];
+    const totalPages = filteredStudents ? Math.ceil(filteredStudents.length / itemsPerPage) : 0;
+
+    // Generate page numbers
+    const pageNumbers = [];
+    for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+    }
+
+    const categories = ['All Students', 'Pending Fees', 'New Joiners', 'Referral Bonus Pending'];
+    const uniqueCourses = ['All Courses', ...new Set(students.map(s => s.course).filter(Boolean))];
 
     return (
-        <div className="space-y-8 fade-in">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Admitted Students</h1>
-                    <p className="text-slate-500 mt-1">Manage enrolled students, fees, and referral records.</p>
+        <div className="space-y-6 fade-in pb-10">
+            {/* Breadcrumbs & Header */}
+            <div className="flex flex-col gap-6">
+                <div className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-widest gap-2">
+                    <span className="hover:text-emerald-500 transition-colors cursor-pointer">Home</span>
+                    <span className="text-slate-700">/</span>
+                    <span className="hover:text-emerald-500 transition-colors cursor-pointer">Students</span>
+                    <span className="text-slate-700">/</span>
+                    <span className="text-white">Joined Details</span>
                 </div>
 
-                <div className="relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-indigo-500 transition-colors" />
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div>
+                        <h1 className="text-4xl font-black text-white tracking-tight">Joined Student Details</h1>
+                        <p className="text-slate-500 mt-2 font-medium max-w-2xl">Manage and track all enrolled student information, payment status, and referral details.</p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <button onClick={handleExport} className="px-6 py-3 bg-[#131b18] text-slate-300 border border-white/5 rounded-xl font-bold text-sm hover:text-white hover:border-white/10 transition-all flex items-center gap-2 group">
+                            <Download className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+                            Export
+                        </button>
+                        <button onClick={handleOpenAdd} className="px-6 py-3 bg-emerald-500 text-black rounded-xl font-black text-sm hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center gap-2">
+                            <Plus className="w-4 h-4" />
+                            Add Student
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Filters Bar */}
+            <div className="bg-[#131b18] p-4 rounded-3xl border border-white/5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
                     <input
                         type="text"
-                        placeholder="Search students..."
-                        className="input-field pl-10 w-64 shadow-sm"
+                        placeholder="Search by Name, Email, or Phone..."
+                        className="w-full bg-[#0a0f0d] border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/30 transition-all"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-            </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden scale-in">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left min-w-[900px]">
-                        <thead className="bg-slate-50/50 text-slate-500 font-semibold border-b border-slate-100 uppercase tracking-wider text-[11px]">
-                            <tr>
-                                <th className="px-6 py-5">Joining Date</th>
-                                <th className="px-6 py-5">Student</th>
-                                <th className="px-6 py-5">Course</th>
-                                {isAdmin && <th className="px-6 py-5">Fee</th>}
-                                {isAdmin && <th className="px-6 py-5">Referral Details</th>}
-                                <th className="px-6 py-5 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {filteredStudents.map((student) => (
-                                <tr key={student._id} className="table-row-hover group">
-                                    <td className="px-6 py-4 text-slate-500 font-medium">
-                                        {student.joiningDate ? new Date(student.joiningDate).toLocaleDateString() : 'N/A'}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="font-bold text-slate-900">{student.name}</div>
-                                        <div className="text-xs text-slate-400">{student.phone}</div>
-                                    </td>
-                                    <td className="px-6 py-4 font-medium text-slate-700">{student.course}</td>
-                                    {isAdmin && (
-                                        <td className="px-6 py-4">
-                                            <span className="font-bold text-indigo-600">₹{student.fee?.toLocaleString()}</span>
-                                        </td>
-                                    )}
-                                    {isAdmin && (
-                                        <td className="px-6 py-4">
-                                            <div className="text-xs font-bold text-slate-900">By: {student.referredBy || 'Direct'}</div>
-                                            <div className="text-[10px] text-emerald-600 font-black uppercase">Bonus: ₹{student.referralBonus || 0}</div>
-                                        </td>
-                                    )}
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => { setSelectedStudent(student); setFormData({ ...student }); setIsEditModalOpen(true); }} className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-xl transition-all"><Edit2 className="w-4 h-4" /></button>
-                                            <button onClick={() => { setSelectedStudent(student); setIsDeleteModalOpen(true); }} className="p-2 hover:bg-rose-50 text-rose-600 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
-                                            <button onClick={() => { setSelectedStudent(student); setIsViewModalOpen(true); }} className="p-2 hover:bg-slate-100 text-slate-600 rounded-xl transition-all"><Eye className="w-4 h-4" /></button>
-                                        </div>
-                                    </td>
-                                </tr>
+                <div className="flex items-center gap-3 overflow-x-auto pb-2 lg:pb-0">
+                    <div className="relative">
+                        <select
+                            value={courseFilter}
+                            onChange={(e) => setCourseFilter(e.target.value)}
+                            className="appearance-none px-4 py-3 bg-[#0a0f0d] border border-white/5 rounded-2xl text-slate-300 text-sm font-bold flex items-center gap-2 hover:border-white/10 pr-10 focus:outline-none cursor-pointer"
+                        >
+                            {uniqueCourses.map(course => (
+                                <option key={course} value={course}>{course}</option>
                             ))}
-                        </tbody>
-                    </table>
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-slate-500 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+
+                    <button
+                        onClick={() => setDateFilter(dateFilter === 'This Month' ? 'All Time' : 'This Month')}
+                        className={`px-4 py-3 border rounded-2xl text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap ${dateFilter === 'This Month' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-[#0a0f0d] border-white/5 text-slate-300 hover:border-white/10'}`}
+                    >
+                        {dateFilter === 'This Month' ? 'This Month' : 'All Time'}
+                        <Calendar className="w-4 h-4" />
+                    </button>
                 </div>
             </div>
 
+            {/* Status Tabs */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                {categories.map(category => (
+                    <button
+                        key={category}
+                        onClick={() => setActiveTab(category)}
+                        className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wide whitespace-nowrap transition-all ${activeTab === category ? 'bg-emerald-500 text-black font-black shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'bg-[#131b18] border border-white/5 text-slate-400 hover:text-white hover:border-white/10'}`}
+                    >
+                        {category} {category === 'All Students' && `(${students.length})`}
+                    </button>
+                ))}
+            </div>
+
+            {/* Main Table */}
+            <div className="bg-[#131b18] rounded-[2rem] border border-white/5 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b border-white/5 bg-[#0a0f0d]">
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Date Joined</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Student Name</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Contact Info</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Course</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Fee to Pay</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Ref. Bonus</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {currentStudents.length > 0 ? currentStudents.map((student) => (
+                                <tr key={student._id} className="hover:bg-white/[0.02] transition-colors group">
+                                    <td className="px-8 py-6 text-sm font-bold text-slate-400">
+                                        {student.joiningDate ? new Date(student.joiningDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                                    </td>
+                                    <td className="px-8 py-6">
+                                        <div className="flex items-center gap-4">
+                                            <div>
+                                                <h4 className="font-bold text-white text-sm">{student.name}</h4>
+                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">ID: #{(student._id).slice(-4).toUpperCase()}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-6">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2 text-slate-400">
+                                                <Phone className="w-3 h-3" />
+                                                <span className="text-xs font-bold font-mono text-slate-300">{student.phone}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-slate-400">
+                                                <Mail className="w-3 h-3" />
+                                                <span className="text-xs font-medium text-slate-500">{student.email}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-6">
+                                        <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-wider border border-emerald-500/20">
+                                            {student.course}
+                                        </span>
+                                    </td>
+                                    <td className="px-8 py-6 text-right sm:text-left">
+                                        <div className="font-black text-white text-sm">₹{student.fee?.toLocaleString()}</div>
+                                        {/* Placeholder for pending logic */}
+                                    </td>
+                                    <td className="px-8 py-6 text-right">
+                                        <span className="font-bold text-emerald-500 text-sm">
+                                            {student.referralBonus > 0 ? `₹${student.referralBonus}` : '-'}
+                                        </span>
+                                    </td>
+                                    <td className="px-8 py-6 text-right">
+                                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => { setSelectedStudent(student); setFormData({ ...student }); setIsEditModalOpen(true); }} className="p-2 bg-white/5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"><Edit2 className="w-4 h-4" /></button>
+                                            <button onClick={() => { setSelectedStudent(student); setIsDeleteModalOpen(true); }} className="p-2 bg-rose-500/10 rounded-lg text-rose-500 hover:text-white hover:bg-rose-500 transition-all"><Trash2 className="w-4 h-4" /></button>
+                                            <button onClick={() => { setSelectedStudent(student); setIsViewModalOpen(true); }} className="p-2 bg-white/5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"><Eye className="w-4 h-4" /></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )) : (
+                                <tr>
+                                    <td colSpan="7" className="px-8 py-20 text-center text-slate-500 font-bold italic">
+                                        No admitted students found matching your filters...
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Pagination */}
+                {filteredStudents.length > 0 && (
+                    <div className="px-8 py-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0a0f0d]">
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                            Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredStudents.length)} of {filteredStudents.length} entries
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+                                disabled={currentPage === 1}
+                                className={`w-8 h-8 rounded-full border border-white/10 flex items-center justify-center transition-all ${currentPage === 1 ? 'opacity-50 cursor-not-allowed text-slate-700' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </button>
+
+                            {pageNumbers.map(number => (
+                                <button
+                                    key={number}
+                                    onClick={() => setCurrentPage(number)}
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${currentPage === number ? 'bg-emerald-500 text-black' : 'border border-white/10 text-slate-500 hover:text-white hover:bg-white/5'}`}
+                                >
+                                    {number}
+                                </button>
+                            ))}
+
+                            <button
+                                onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                                className={`w-8 h-8 rounded-full border border-white/10 flex items-center justify-center transition-all ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed text-slate-700' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {/* Modals */}
+
+            {/* Lead Selection Modal */}
+            <Modal isOpen={isLeadSelectionModalOpen} onClose={() => setIsLeadSelectionModalOpen(false)} title="Select Lead to Admit" maxWidth="max-w-3xl">
+                <div className="h-[60vh] flex flex-col">
+                    <div className="mb-4">
+                        <input
+                            type="text"
+                            placeholder="Search leads..."
+                            className="w-full bg-[#0a0f0d] border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/30"
+                        />
+                    </div>
+                    <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+                        {leads.length > 0 ? leads.map(lead => (
+                            <div key={lead._id} className="p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all flex items-center justify-between group">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                                        <Users className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-white text-sm">{lead.name}</h4>
+                                        <div className="flex items-center gap-3 mt-1 text-slate-400 text-xs">
+                                            <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {lead.phone}</span>
+                                            <span className="w-1 h-1 rounded-full bg-slate-600"></span>
+                                            <span className="font-bold text-emerald-500">{lead.course}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => handleSelectLead(lead)}
+                                    className="px-4 py-2 bg-emerald-500 text-black rounded-lg text-xs font-black uppercase tracking-wide hover:bg-emerald-400 transition-all opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0"
+                                >
+                                    Select
+                                </button>
+                            </div>
+                        )) : (
+                            <div className="text-center py-20 text-slate-500">No leads available to admit.</div>
+                        )}
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Admit Modal */}
+            <Modal isOpen={isAdmitModalOpen} onClose={() => setIsAdmitModalOpen(false)} title={`Admit ${selectedLeadForAdmit?.name || 'Student'}`}>
+                {selectedLeadForAdmit && (
+                    <form onSubmit={handleAdmitSubmit} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1 col-span-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Fee Amount</label>
+                                <input
+                                    type="number"
+                                    className="input-field"
+                                    value={admitData.fee}
+                                    onChange={(e) => setAdmitData({ ...admitData, fee: e.target.value })}
+                                    placeholder="Enter total course fee"
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Joining Date</label>
+                                <input
+                                    type="date"
+                                    className="input-field"
+                                    value={admitData.joiningDate}
+                                    onChange={(e) => setAdmitData({ ...admitData, joiningDate: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Referral Bonus</label>
+                                <input
+                                    type="number"
+                                    className="input-field"
+                                    value={admitData.referralBonus}
+                                    onChange={(e) => setAdmitData({ ...admitData, referralBonus: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-1 col-span-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Referred By</label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    value={admitData.referredBy}
+                                    onChange={(e) => setAdmitData({ ...admitData, referredBy: e.target.value })}
+                                    placeholder="Optional"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-end pt-6 gap-3">
+                            <button type="button" onClick={() => setIsAdmitModalOpen(false)} className="btn-secondary">Cancel</button>
+                            <button type="submit" className="btn-primary">Confirm Admission</button>
+                        </div>
+                    </form>
+                )}
+            </Modal>
+
             <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Admitted Student">
                 <form onSubmit={handleUpdate} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1 col-span-2">
                             <label className="text-xs font-bold text-slate-500 uppercase ml-1">Name</label>
                             <input className="input-field" value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Gender</label>
+                            <select
+                                className="input-field"
+                                value={formData.gender || 'Male'}
+                                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                            >
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
                         </div>
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-slate-500 uppercase ml-1">Fee</label>
@@ -158,19 +526,7 @@ const StudentsPage = () => {
             <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="Student Details" maxWidth="max-w-2xl">
                 {selectedStudent && (
                     <div className="flex flex-col h-full bg-[#0d1210] text-[#e2e8f0]">
-                        {/* Profile Header */}
                         <div className="px-8 pt-8 pb-10 flex flex-col sm:flex-row items-center gap-8">
-                            <div className="relative">
-                                <div className="w-32 h-32 rounded-full border-4 border-emerald-500/20 p-1 bg-emerald-500/10 overflow-hidden">
-                                    <div className="w-full h-full rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 text-4xl font-black">
-                                        {selectedStudent.name.charAt(0)}
-                                    </div>
-                                </div>
-                                <div className="absolute bottom-1 right-1 bg-emerald-500 text-black p-1.5 rounded-full ring-4 ring-[#0d1210]">
-                                    <CheckCircle2 className="w-4 h-4" />
-                                </div>
-                            </div>
-
                             <div className="flex-1 text-center sm:text-left">
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2 justify-center sm:justify-start">
                                     <h2 className="text-4xl font-black text-white tracking-tight">{selectedStudent.name}</h2>
@@ -241,9 +597,6 @@ const StudentsPage = () => {
                                         <p className="text-[10px] font-black text-slate-600 uppercase mb-4 tracking-widest">Referral Info</p>
                                         <div className="p-4 rounded-2xl bg-white/2 border border-white/5 flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-400 overflow-hidden">
-                                                    {selectedStudent.referredBy ? selectedStudent.referredBy.charAt(0) : 'D'}
-                                                </div>
                                                 <div>
                                                     <p className="text-[10px] text-slate-500 font-bold uppercase italic leading-none mb-1">Referred By</p>
                                                     <p className="text-sm font-bold text-white">{selectedStudent.referredBy || 'Direct'}</p>
@@ -267,7 +620,15 @@ const StudentsPage = () => {
                     </div>
                 )}
             </Modal>
-
+            <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Confirm Delete">
+                <div className="space-y-6">
+                    <p className="text-slate-600 leading-relaxed">Are you sure you want to delete <span className="font-bold text-slate-900">{selectedStudent?.name}</span>? This action is permanent.</p>
+                    <div className="flex justify-end gap-3">
+                        <button onClick={() => setIsDeleteModalOpen(false)} className="btn-secondary">Cancel</button>
+                        <button onClick={confirmDelete} className="px-6 py-2 bg-rose-600 text-white rounded-xl font-bold hover:bg-rose-700 transition-all">Delete</button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };
