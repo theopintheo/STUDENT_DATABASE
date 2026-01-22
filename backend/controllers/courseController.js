@@ -18,3 +18,23 @@ exports.getCourseByCode = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+exports.updateCourse = async (req, res) => {
+    try {
+        const { description, totalFee } = req.body;
+        const updateData = {};
+        if (description) updateData.description = description;
+        if (totalFee) updateData['fees.total'] = totalFee;
+
+        const course = await Course.findByIdAndUpdate(
+            req.params.id,
+            { $set: updateData },
+            { new: true }
+        );
+
+        if (!course) return res.status(404).json({ message: 'Course not found' });
+        res.json(course);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};

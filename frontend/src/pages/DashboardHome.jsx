@@ -32,7 +32,7 @@ const DashboardHome = () => {
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [courses, setCourses] = useState([]);
     const [formData, setFormData] = useState({
-        name: '', email: '', phone: '', course: '', reply: 'Interested', additionalInfo: ''
+        name: '', email: '', phone: '', course: '', reply: 'Interested', additionalInfo: '', reminderDate: '', remind: false
     });
 
     useEffect(() => {
@@ -56,12 +56,25 @@ const DashboardHome = () => {
                 interestedCount,
                 pendingReminders,
                 successRate,
-                revenue,
+                revenue: revenue || 0,
                 potentialRevenue,
                 referrals,
                 statusBreakdown: statusBreakdown || [],
                 allCourses: allCourses || []
             });
+
+            // Calculate Total Revenue from all students
+            const allStudentsRes = await studentAPI.getAll();
+            const allStudents = allStudentsRes.data;
+            const totalRev = allStudents.filter(s => s.isAdmitted).reduce((acc, curr) => acc + (parseInt(curr.fee) || 0), 0);
+
+            setStats(prev => ({
+                ...prev,
+                revenue: totalRev,
+                totalStudents: allStudents.filter(s => s.isAdmitted).length,
+                // Ensuring lead count is accurate if API doesn't provide
+                interestedCount: allStudents.filter(s => !s.isAdmitted).length
+            }));
             setRecentActivity(recentActivity);
             setUpcomingReminders(upcomingReminders || []);
             // Fallback data for Popular Facilities if DB is empty
@@ -96,7 +109,9 @@ const DashboardHome = () => {
             await studentAPI.add({ ...formData, date: new Date().toISOString().split('T')[0] });
             setIsAddModalOpen(false);
             fetchDashboardData();
-            setFormData({ name: '', email: '', phone: '', course: '', reply: 'Interested', additionalInfo: '' });
+            setIsAddModalOpen(false);
+            fetchDashboardData();
+            setFormData({ name: '', email: '', phone: '', course: '', reply: 'Interested', additionalInfo: '', reminderDate: '', remind: false });
         } catch (err) {
             alert("Failed to add student. Please check all fields.");
         }
@@ -141,7 +156,6 @@ const DashboardHome = () => {
         { title: 'Total Students', value: stats.totalStudents, change: '+12%', icon: Users },
         { title: 'Interested Leads', value: stats.interestedCount, change: '+5%', icon: UserPlus },
         { title: 'Total Revenue', value: `₹${stats.revenue.toLocaleString()}`, change: '+15%', icon: Zap },
-        { title: 'Potential Rev.', value: `₹${stats.potentialRevenue.toLocaleString()}`, change: 'Target', icon: Activity },
     ];
 
     return (
@@ -394,6 +408,15 @@ const DashboardHome = () => {
                             <option value="Busy">Busy</option>
                         </select>
                     </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Follow-up Date (Optional)</label>
+                        <input
+                            type="date"
+                            className="input-field"
+                            value={formData.reminderDate || ''}
+                            onChange={(e) => setFormData({ ...formData, reminderDate: e.target.value, remind: !!e.target.value })}
+                        />
+                    </div>
                     <div className="flex justify-end pt-4 gap-3">
                         <button type="button" onClick={() => setIsAddModalOpen(false)} className="btn-secondary">Cancel</button>
                         <button type="submit" className="btn-primary">Create Entry</button>
@@ -435,7 +458,7 @@ const DashboardHome = () => {
                     </div>
                 )}
             </Modal>
-        </div>
+        </div >
     );
 };
 

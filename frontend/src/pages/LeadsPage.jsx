@@ -7,10 +7,17 @@ import { studentAPI, courseAPI } from '../api';
 
 const LeadsPage = () => {
     const navigate = useNavigate();
-    const [students, setStudents] = useState([]);
-    const [courses, setCourses] = useState([]);
+    const [students, setStudents] = useState([]); // This actually stores leads
+    const [courses, setCourses] = useState([]); // Courses for dropdown in modal
+    const [coursesList, setCoursesList] = useState([]); // Courses for filter
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Filter States
+    const [activeTab, setActiveTab] = useState('All Leads');
+    const [courseFilter, setCourseFilter] = useState('All Courses');
+    const [dateFilter, setDateFilter] = useState('All Time');
+
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -53,10 +60,16 @@ const LeadsPage = () => {
         try {
             const response = await courseAPI.getAll();
             setCourses(response.data);
+            setCoursesList(response.data);
         } catch (err) {
             console.error("Error fetching courses:", err);
         }
     };
+
+    // Reset page on filter change (if pagination existed)
+    useEffect(() => {
+        // Reset logic if needed
+    }, [searchTerm, activeTab, courseFilter, dateFilter]);
 
     const handleAdd = () => {
         setFormData({ name: '', email: '', phone: '', course: '', reply: 'Interested', additionalInfo: '', reminderDate: '', remind: false, gender: 'Male' });
@@ -131,11 +144,37 @@ const LeadsPage = () => {
         }
     };
 
-    const filteredStudents = students.filter(student =>
-        student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.course?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.phone?.includes(searchTerm)
-    );
+    const filteredStudents = students.filter(student => {
+        const matchesSearch =
+            student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.course?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.phone?.includes(searchTerm) ||
+            student.email?.toLowerCase().includes(searchTerm.toLowerCase());
+
+        let matchesTab = true;
+        if (activeTab !== 'All Leads') {
+            matchesTab = student.reply === activeTab;
+        }
+
+        let matchesCourse = true;
+        if (courseFilter !== 'All Courses') {
+            matchesCourse = student.course === courseFilter;
+        }
+
+        let matchesDate = true;
+        if (dateFilter === 'This Month') {
+            const createdDate = new Date(student.createdAt);
+            const now = new Date();
+            matchesDate = createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear();
+        }
+
+        return matchesSearch && matchesTab && matchesCourse && matchesDate;
+    });
+
+    const categories = ['All Leads', 'Interested', 'Follow-up', 'Not Interested', 'Busy'];
+    // Sort courses alphabetically for better UX
+    const sortedCourses = [...coursesList].sort((a, b) => a.name.localeCompare(b.name));
+    const filterCourseOptions = ['All Courses', ...sortedCourses.map(c => c.name)];
 
     return (
         <div className="space-y-8 fade-in pb-10">
@@ -147,30 +186,59 @@ const LeadsPage = () => {
                 </div>
             </div>
 
-            {/* Top Action Bar */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                <div className="relative group flex-1 max-w-xl">
+            {/* Filters Bar */}
+            <div className="bg-[#131b18] p-4 rounded-3xl border border-white/5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
                     <input
                         type="text"
-                        placeholder="Search students by name, email, or phone..."
-                        className="w-full bg-white/5 border border-white/10 rounded-full pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-all shadow-2xl"
+                        placeholder="Search leads..."
+                        className="w-full bg-[#0a0f0d] border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/30 transition-all"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <button onClick={handleAdd} className="px-6 py-2.5 bg-emerald-500 text-black rounded-full font-black text-sm hover:bg-emerald-400 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-                        <Plus className="w-4 h-4" /> Add Student
+                <div className="flex items-center gap-3 overflow-x-auto pb-2 lg:pb-0">
+                    <div className="relative">
+                        <select
+                            value={courseFilter}
+                            onChange={(e) => setCourseFilter(e.target.value)}
+                            className="appearance-none px-4 py-3 bg-[#0a0f0d] border border-white/5 rounded-2xl text-slate-300 text-sm font-bold flex items-center gap-2 hover:border-white/10 pr-10 focus:outline-none cursor-pointer"
+                        >
+                            {filterCourseOptions.map(course => (
+                                <option key={course} value={course}>{course}</option>
+                            ))}
+                        </select>
+                        <Filter className="w-4 h-4 text-slate-500 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+
+                    <button
+                        onClick={() => setDateFilter(dateFilter === 'This Month' ? 'All Time' : 'This Month')}
+                        className={`px-4 py-3 border rounded-2xl text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap ${dateFilter === 'This Month' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-[#0a0f0d] border-white/5 text-slate-300 hover:border-white/10'}`}
+                    >
+                        {dateFilter === 'This Month' ? 'This Month' : 'All Time'}
+                        <Calendar className="w-4 h-4" />
                     </button>
-                    <button className="px-5 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl font-bold text-sm hover:bg-white/10 transition-all flex items-center gap-2">
-                        <Download className="w-4 h-4" /> Export
-                    </button>
-                    <button className="px-5 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl font-bold text-sm hover:bg-white/10 transition-all flex items-center gap-2">
-                        <Filter className="w-4 h-4" /> Filter
+
+                    <button onClick={handleAdd} className="px-5 py-3 bg-emerald-500 text-black rounded-xl font-black text-sm hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center gap-2 whitespace-nowrap">
+                        <Plus className="w-4 h-4" />
+                        Add Lead
                     </button>
                 </div>
+            </div>
+
+            {/* Status Tabs */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                {categories.map(category => (
+                    <button
+                        key={category}
+                        onClick={() => setActiveTab(category)}
+                        className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wide whitespace-nowrap transition-all ${activeTab === category ? 'bg-emerald-500 text-black font-black shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'bg-[#131b18] border border-white/5 text-slate-400 hover:text-white hover:border-white/10'}`}
+                    >
+                        {category}
+                    </button>
+                ))}
             </div>
 
             {/* Premium Table Container */}
@@ -337,6 +405,7 @@ const LeadsPage = () => {
                             </select>
                         </div>
                     </div>
+
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-500 uppercase ml-1">Additional Info</label>
                         <textarea
@@ -345,6 +414,17 @@ const LeadsPage = () => {
                             value={formData.additionalInfo || ''}
                             onChange={(e) => setFormData({ ...formData, additionalInfo: e.target.value })}
                         ></textarea>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Follow-up Date</label>
+                            <input
+                                type="date"
+                                className="input-field"
+                                value={formData.reminderDate ? formData.reminderDate.split('T')[0] : ''}
+                                onChange={(e) => setFormData({ ...formData, reminderDate: e.target.value, remind: true })}
+                            />
+                        </div>
                     </div>
                     <div className="flex justify-end pt-6 gap-3">
                         <button type="button" onClick={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); }} className="btn-secondary">Cancel</button>
@@ -609,7 +689,7 @@ const LeadsPage = () => {
                     </div>
                 </div>
             </Modal>
-        </div>
+        </div >
     );
 };
 
