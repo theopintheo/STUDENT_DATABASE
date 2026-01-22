@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Eye, Calendar, DollarSign, Award, Users, Download, Filter, ChevronDown, Phone, Mail, ChevronLeft, ChevronRight, Activity, MapPin, UserPlus, CheckCircle } from 'lucide-react';
+import Link from 'react-router-dom'; // Assuming Link is used somewhere or just keeping imports clean
 import Modal from '../components/Modal';
-import { studentAPI } from '../api';
+import { studentAPI, courseAPI } from '../api';
 
 const StudentsPage = () => {
     const [students, setStudents] = useState([]);
     const [leads, setLeads] = useState([]); // State for leads
+    const [coursesList, setCoursesList] = useState([]); // Available courses
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -22,6 +24,12 @@ const StudentsPage = () => {
 
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [selectedLeadForAdmit, setSelectedLeadForAdmit] = useState(null);
+
+    // Direct Add State
+    const [isDirectAddModalOpen, setIsDirectAddModalOpen] = useState(false);
+    const [newStudentData, setNewStudentData] = useState({
+        name: '', email: '', phone: '', course: '', fee: '', joiningDate: new Date().toISOString().split('T')[0], referredBy: '', referralBonus: ''
+    });
 
     // Filters State
     const [activeTab, setActiveTab] = useState('All Students');
@@ -41,7 +49,17 @@ const StudentsPage = () => {
 
     useEffect(() => {
         fetchData();
+        fetchCourses();
     }, []);
+
+    const fetchCourses = async () => {
+        try {
+            const response = await courseAPI.getAll();
+            setCoursesList(response.data);
+        } catch (err) {
+            console.error("Error fetching courses:", err);
+        }
+    };
 
     // Reset page on filter change
     useEffect(() => {
@@ -69,8 +87,11 @@ const StudentsPage = () => {
     const handleSelectLead = (lead) => {
         setSelectedLeadForAdmit(lead);
         setIsLeadSelectionModalOpen(false);
+
+        const matchedCourse = coursesList.find(c => c.name === lead.course);
+
         setAdmitData({
-            fee: '',
+            fee: matchedCourse ? matchedCourse.fees?.total : '',
             joiningDate: new Date().toISOString().split('T')[0],
             referralBonus: '0',
             referredBy: ''
@@ -93,6 +114,24 @@ const StudentsPage = () => {
             setSelectedLeadForAdmit(null);
         } catch (err) {
             console.error("Error admitting student:", err);
+        }
+    };
+
+    const handleDirectAddSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await studentAPI.add({
+                ...newStudentData,
+                isAdmitted: true,
+                status: 'Active',
+                reply: 'Interested' // Default for schema compatibility if needed
+            });
+            fetchData();
+            setIsDirectAddModalOpen(false);
+            setNewStudentData({ name: '', email: '', phone: '', course: '', fee: '', joiningDate: new Date().toISOString().split('T')[0], referredBy: '', referralBonus: '' });
+        } catch (err) {
+            console.error("Error adding student direct:", err);
+            alert("Failed to add student. Please check fields.");
         }
     };
 
@@ -198,7 +237,11 @@ const StudentsPage = () => {
     }
 
     const categories = ['All Students', 'Pending Fees', 'New Joiners', 'Referral Bonus Pending'];
-    const uniqueCourses = ['All Courses', ...new Set(students.map(s => s.course).filter(Boolean))];
+    // const uniqueCourses = ['All Courses', ...new Set(students.map(s => s.course).filter(Boolean))]; // Old way
+
+    // Sort courses alphabetically for better UX
+    const sortedCourses = [...coursesList].sort((a, b) => a.name.localeCompare(b.name));
+    const filterCourseOptions = ['All Courses', ...sortedCourses.map(c => c.name)];
 
     return (
         <div className="space-y-6 fade-in pb-10">
@@ -223,9 +266,13 @@ const StudentsPage = () => {
                             <Download className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
                             Export
                         </button>
-                        <button onClick={handleOpenAdd} className="px-6 py-3 bg-emerald-500 text-black rounded-xl font-black text-sm hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center gap-2">
+                        <button onClick={handleOpenAdd} className="px-5 py-3 bg-[#131b18] text-emerald-500 border border-emerald-500/20 rounded-xl font-bold text-sm hover:bg-emerald-500/10 transition-all flex items-center gap-2">
+                            <UserPlus className="w-4 h-4" />
+                            Admit Lead
+                        </button>
+                        <button onClick={() => setIsDirectAddModalOpen(true)} className="px-5 py-3 bg-emerald-500 text-black rounded-xl font-black text-sm hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center gap-2">
                             <Plus className="w-4 h-4" />
-                            Add Student
+                            New Student
                         </button>
                     </div>
                 </div>
@@ -251,7 +298,7 @@ const StudentsPage = () => {
                             onChange={(e) => setCourseFilter(e.target.value)}
                             className="appearance-none px-4 py-3 bg-[#0a0f0d] border border-white/5 rounded-2xl text-slate-300 text-sm font-bold flex items-center gap-2 hover:border-white/10 pr-10 focus:outline-none cursor-pointer"
                         >
-                            {uniqueCourses.map(course => (
+                            {filterCourseOptions.map(course => (
                                 <option key={course} value={course}>{course}</option>
                             ))}
                         </select>
@@ -432,6 +479,60 @@ const StudentsPage = () => {
                         )}
                     </div>
                 </div>
+            </Modal>
+
+            {/* Direct Add Modal */}
+            <Modal isOpen={isDirectAddModalOpen} onClose={() => setIsDirectAddModalOpen(false)} title="Add New Student">
+                <form onSubmit={handleDirectAddSubmit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Name</label>
+                            <input className="input-field" value={newStudentData.name} onChange={(e) => setNewStudentData({ ...newStudentData, name: e.target.value })} required />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Phone</label>
+                            <input className="input-field" value={newStudentData.phone} onChange={(e) => setNewStudentData({ ...newStudentData, phone: e.target.value })} required />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Email</label>
+                            <input className="input-field" value={newStudentData.email} onChange={(e) => setNewStudentData({ ...newStudentData, email: e.target.value })} required />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Course</label>
+                            <select
+                                className="input-field"
+                                value={newStudentData.course}
+                                onChange={(e) => {
+                                    const selectedCourseName = e.target.value;
+                                    const selectedCourse = coursesList.find(c => c.name === selectedCourseName);
+                                    setNewStudentData({
+                                        ...newStudentData,
+                                        course: selectedCourseName,
+                                        fee: selectedCourse ? selectedCourse.fees?.total : newStudentData.fee
+                                    });
+                                }}
+                                required
+                            >
+                                <option value="">Select Course</option>
+                                {coursesList.map(course => (
+                                    <option key={course._id} value={course.name}>{course.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Fee</label>
+                            <input type="number" className="input-field" value={newStudentData.fee} onChange={(e) => setNewStudentData({ ...newStudentData, fee: e.target.value })} required />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Joining Date</label>
+                            <input type="date" className="input-field" value={newStudentData.joiningDate} onChange={(e) => setNewStudentData({ ...newStudentData, joiningDate: e.target.value })} required />
+                        </div>
+                    </div>
+                    <div className="flex justify-end pt-4 gap-3">
+                        <button type="button" onClick={() => setIsDirectAddModalOpen(false)} className="btn-secondary">Cancel</button>
+                        <button type="submit" className="btn-primary">Add Student</button>
+                    </div>
+                </form>
             </Modal>
 
             {/* Admit Modal */}

@@ -29,6 +29,7 @@ export const dashboardAPI = {
 
 export const courseAPI = {
     getAll: () => api.get('/courses'),
+    update: (id, data) => api.put(`/courses/${id}`, data),
 };
 
 export default api;

@@ -1,12 +1,14 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Home, Users, Share2, LogOut, UserPlus } from 'lucide-react';
+import logo from '../assets/logo.png';
 
 const Sidebar = ({ isOpen, onClose }) => {
     const navItems = [
         { name: 'Home', icon: Home, path: '/dashboard' },
         { name: 'Leads', icon: UserPlus, path: '/leads' },
         { name: 'Student Details', icon: Users, path: '/students' },
+        { name: 'Courses', icon: Home, path: '/courses' },
 
         { name: 'Share Platform', icon: Share2, path: '/share' },
     ];
@@ -23,8 +25,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     return (
         <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0d1210] border-r border-white/5 flex flex-col transition-transform duration-300 transform lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
             <div className="px-8 py-10">
-                <h3 className="text-white font-bold text-sm leading-tight">Admin</h3>
-                <p className="text-slate-500 text-xs">Dashboard</p>
+                <img src={logo} alt="Logo" className="h-12 w-auto object-contain" />
             </div>
 
             <nav className="flex-1 px-4 space-y-1">

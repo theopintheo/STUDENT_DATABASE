@@ -5,8 +5,9 @@ import LoginPage from './pages/LoginPage';
 import DashboardHome from './pages/DashboardHome';
 import LeadsPage from './pages/LeadsPage';
 import StudentsPage from './pages/StudentsPage';
-import SharePlatform from './pages/SharePlatform';
 import LeadDetailPage from './pages/LeadDetailPage';
+import SharePlatform from './pages/SharePlatform';
+import CoursesPage from './pages/CoursesPage';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
             <Route path="leads" element={<LeadsPage />} />
             <Route path="leads/:id" element={<LeadDetailPage />} />
             <Route path="students" element={<StudentsPage />} />
+            <Route path="courses" element={<CoursesPage />} />
             <Route path="share" element={<SharePlatform />} />
           </Route>
         </Route>
