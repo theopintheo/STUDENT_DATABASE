@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Eye, Calendar, DollarSign, Award, Users, Download, Filter, ChevronDown, Phone, Mail, ChevronLeft, ChevronRight, Activity, MapPin, UserPlus, CheckCircle } from 'lucide-react';
-import Link from 'react-router-dom'; // Assuming Link is used somewhere or just keeping imports clean
+import { Link } from 'react-router-dom'; // Assuming Link is used somewhere or just keeping imports clean
 import Modal from '../components/Modal';
 import { studentAPI, courseAPI } from '../api';
 

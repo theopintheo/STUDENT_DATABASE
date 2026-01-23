@@ -38,3 +38,29 @@ exports.updateCourse = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+exports.createCourse = async (req, res) => {
+    try {
+        const { name, courseCode, description, fees, duration } = req.body;
+
+        // Check if course code already exists
+        const existingCourse = await Course.findOne({ courseCode });
+        if (existingCourse) {
+            return res.status(400).json({ message: 'Course code already exists' });
+        }
+
+        const course = new Course({
+            name,
+            courseCode,
+            description,
+            fees,
+            duration,
+            status: 'active'
+        });
+
+        const newCourse = await course.save();
+        res.status(201).json(newCourse);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+};
