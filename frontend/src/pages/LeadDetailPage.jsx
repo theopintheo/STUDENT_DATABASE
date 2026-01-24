@@ -323,6 +323,7 @@ const LeadDetailPage = () => {
                                 <option value="Interested">Interested</option>
                                 <option value="Follow-up">Follow-up</option>
                                 <option value="Not Interested">Not Interested</option>
+                                <option value="Busy">Busy</option>
                             </select>
                         </div>
                     </div>

@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Users, UserPlus, Clock, Zap, Search, Bell, Settings, Plus, MoreHorizontal, Download, Calendar, Database, Shield, Activity, X } from 'lucide-react';
+import { Users, UserPlus, Clock, Zap, Search, Bell, Settings, Plus, MoreHorizontal, Download, Calendar, Database, Shield, Activity, X, Sun, Moon } from 'lucide-react';
 import { dashboardAPI, studentAPI, courseAPI } from '../api';
 import Modal from '../components/Modal';
 
 const DashboardHome = () => {
     const navigate = useNavigate();
+    const { theme, toggleTheme } = useOutletContext();
     const [stats, setStats] = useState({
         totalStudents: 0,
-        interestedCount: 0,
+        totalLeads: 0,
         pendingReminders: 0,
         successRate: 0,
         revenue: 0,
@@ -45,15 +46,19 @@ const DashboardHome = () => {
             setLoading(true);
             const response = await dashboardAPI.getStats();
             const {
-                totalStudents, interestedCount, pendingReminders,
+                totalStudents, pendingReminders,
                 successRate, revenue, potentialRevenue, referrals,
                 statusBreakdown, recentActivity, upcomingReminders,
                 studentData, engagementData, allCourses
             } = response.data;
 
+            if (statusBreakdown) {
+                // Default sort by count descending
+                statusBreakdown.sort((a, b) => b.count - a.count);
+            }
+
             setStats({
                 totalStudents,
-                interestedCount,
                 pendingReminders,
                 successRate,
                 revenue: revenue || 0,
@@ -72,18 +77,20 @@ const DashboardHome = () => {
                 ...prev,
                 revenue: totalRev,
                 totalStudents: allStudents.filter(s => s.isAdmitted).length,
-                // Ensuring lead count is accurate if API doesn't provide
-                interestedCount: allStudents.filter(s => !s.isAdmitted).length
+                totalLeads: allStudents.filter(s => !s.isAdmitted).length,
+                successRate: allStudents.length > 0 ? Math.round((allStudents.filter(s => s.isAdmitted).length / allStudents.length) * 100) : 0
             }));
             setRecentActivity(recentActivity);
             setUpcomingReminders(upcomingReminders || []);
             // Fallback data for Popular Facilities if DB is empty
             const fallbackCourseData = [
-                { name: 'Full Stack Dev', count: 35 },
-                { name: 'Data Science', count: 28 },
-                { name: 'UI/UX Design', count: 22 },
+                { name: 'Fullstack AI & ML', count: 35 },
+                { name: 'DevOps Engineering', count: 28 },
+                { name: 'Data Science', count: 22 },
                 { name: 'Cyber Security', count: 18 },
-                { name: 'Digital Marketing', count: 15 }
+                { name: 'UI/UX Design', count: 15 },
+                { name: 'Digital Marketing', count: 12 },
+                { name: 'Python Summer Coding', count: 10 }
             ];
             setCourseData(studentData && studentData.length > 0 ? studentData : fallbackCourseData);
             setEngagementData(engagementData);
@@ -154,31 +161,42 @@ const DashboardHome = () => {
 
     const statCards = [
         { title: 'Total Students', value: stats.totalStudents, change: '+12%', icon: Users },
-        { title: 'Interested Leads', value: stats.interestedCount, change: '+5%', icon: UserPlus },
+        { title: 'Total Leads', value: stats.totalLeads, change: '+8%', icon: UserPlus },
+        { title: 'Success Rate', value: `${stats.successRate}%`, change: '+2.4%', icon: Activity },
         { title: 'Total Revenue', value: `₹${stats.revenue.toLocaleString()}`, change: '+15%', icon: Zap },
     ];
+
+    // Prepare facilities list: prioritize Course content, fallback to Student stats
+    const facilitiesList = courses.length > 0 ? courses.map(c => c.name) : stats.allCourses;
 
     return (
         <div className="space-y-8 fade-in pb-10">
             {/* Top Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-black text-white tracking-tight">Facilities Overview</h1>
-                    <p className="text-slate-500 text-sm mt-1 font-medium italic">Detailed breakdown of your current data assets</p>
+                    <h1 className="text-3xl font-black text-[var(--text-main)] tracking-tight">Facilities Overview</h1>
+                    <p className="text-[var(--text-muted)] text-sm mt-1 font-medium italic">Detailed breakdown of your current data assets</p>
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={toggleTheme}
+                        className="p-2.5 rounded-xl bg-white/5 text-[var(--text-muted)] hover:bg-white/10 hover:text-[var(--text-main)] transition-all border border-white/5"
+                        title="Toggle Theme"
+                    >
+                        {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                    </button>
                     <div className="relative group hidden sm:block">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-4 h-4" />
                         <input
                             type="text"
                             placeholder="Quick search..."
-                            className="bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-all w-48"
+                            className="bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-sm text-[var(--text-main)] focus:outline-none focus:border-emerald-500/50 transition-all w-48"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <button onClick={exportData} className="p-2.5 rounded-xl bg-white/5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/10 transition-all border border-white/5 flex items-center gap-2">
+                    <button onClick={exportData} className="p-2.5 rounded-xl bg-white/5 text-[var(--text-muted)] hover:text-emerald-500 hover:bg-emerald-500/10 transition-all border border-white/5 flex items-center gap-2">
                         <Download className="w-5 h-5" />
                         <span className="text-xs font-bold hidden lg:inline">Export CSV</span>
                     </button>
@@ -190,20 +208,20 @@ const DashboardHome = () => {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                 {statCards.map((stat, index) => (
-                    <div key={index} className="glass-card p-6 flex flex-col justify-between group cursor-pointer relative overflow-hidden">
+                    <div key={index} onClick={() => stat.path && navigate(stat.path, { state: stat.state })} className="glass-card p-6 flex flex-col justify-between group cursor-pointer relative overflow-hidden">
                         <div className="flex items-start justify-between mb-4">
                             <div className="p-3 rounded-xl bg-white/5 text-emerald-500 group-hover:bg-emerald-500 group-hover:text-black transition-all duration-300">
                                 <stat.icon className="w-6 h-6" />
                             </div>
-                            <span className={`text-[11px] font-black px-2 py-1 rounded-lg ${stat.change.includes('+') ? 'bg-emerald-500/10 text-emerald-500' : 'bg-white/10 text-white/60'}`}>
+                            <span className={`text-[11px] font-black px-2 py-1 rounded-lg ${stat.change.includes('+') ? 'bg-emerald-500/10 text-emerald-500' : 'bg-white/10 text-[var(--text-main)]/60'}`}>
                                 {stat.change}
                             </span>
                         </div>
                         <div>
-                            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">{stat.title}</p>
-                            <h3 className="text-3xl font-black text-white">{stat.value}</h3>
+                            <p className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider mb-1">{stat.title}</p>
+                            <h3 className="text-3xl font-black text-[var(--text-main)]">{stat.value}</h3>
                         </div>
                     </div>
                 ))}
@@ -216,13 +234,15 @@ const DashboardHome = () => {
                         <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
                             <Database className="w-5 h-5" />
                         </div>
-                        <h3 className="text-lg font-bold text-white">Database Inventory</h3>
+                        <h3 className="text-lg font-bold text-[var(--text-main)]">Database Inventory</h3>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
                         {stats.statusBreakdown.map((item, idx) => (
-                            <div key={idx} className="p-4 rounded-2xl bg-white/2 border border-white/5 hover:bg-white/5 transition-colors cursor-pointer" onClick={() => navigate('/leads')}>
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{item._id || 'UNSET'}</p>
-                                <p className="text-2xl font-black text-white">{item.count}</p>
+                            <div key={idx} className="p-4 rounded-2xl bg-white/2 border border-white/5 hover:bg-white/5 transition-colors cursor-pointer" onClick={() => navigate('/leads', { state: { activeTab: item._id } })}>
+                                <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">
+                                    {item._id === 'Interested' ? 'Interested Leads' : (item._id || 'UNSET')}
+                                </p>
+                                <p className="text-2xl font-black text-[var(--text-main)]">{item.count}</p>
                                 <div className="w-full bg-white/5 h-1 mt-3 rounded-full overflow-hidden">
                                     <div
                                         className="bg-emerald-500 h-full rounded-full transition-all duration-1000"
@@ -235,17 +255,17 @@ const DashboardHome = () => {
                 </div>
 
                 <div className="glass-card p-8 scroll-glass">
-                    <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-[var(--text-main)] mb-6 flex items-center gap-2">
                         <Shield className="w-5 h-5 text-emerald-500" />
                         Available Facilities
                     </h3>
                     <div className="flex flex-wrap gap-2 overflow-y-auto max-h-[160px] pr-2 custom-scrollbar">
-                        {stats.allCourses.length > 0 ? stats.allCourses.map((course, idx) => (
-                            <span key={idx} className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 text-[11px] font-bold text-slate-400 hover:text-white hover:border-emerald-500/30 transition-all cursor-pointer">
+                        {facilitiesList.length > 0 ? facilitiesList.map((course, idx) => (
+                            <span key={idx} className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 text-[11px] font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-emerald-500/30 transition-all cursor-pointer">
                                 {course}
                             </span>
                         )) : (
-                            <p className="text-xs text-slate-500 italic">No facilities detected</p>
+                            <p className="text-xs text-[var(--text-muted)] italic">No facilities detected</p>
                         )}
                     </div>
                 </div>
@@ -254,11 +274,11 @@ const DashboardHome = () => {
             {/* Main Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Engagement Area Chart */}
-                <div className="lg:col-span-2 glass-card p-8">
+                {/* <div className="lg:col-span-2 glass-card p-8">
                     <div className="flex items-center justify-between mb-8">
                         <div>
-                            <h3 className="text-lg font-bold text-white">Enrollment Trends</h3>
-                            <p className="text-sm text-slate-500 font-medium">Real-time registration activity</p>
+                            <h3 className="text-lg font-bold text-[var(--text-main)]">Enrollment Trends</h3>
+                            <p className="text-sm text-[var(--text-muted)] font-medium">Real-time registration activity</p>
                         </div>
                     </div>
                     <div className="h-[300px] w-full">
@@ -278,14 +298,14 @@ const DashboardHome = () => {
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
+                </div> */}
 
                 {/* Upcoming Reminders */}
-                <div className="glass-card p-8 text-white">
+                <div className="glass-card p-8 text-[var(--text-main)]">
                     <div className="mb-8 flex items-center justify-between">
                         <div>
                             <h3 className="text-lg font-bold">Upcoming Reminders</h3>
-                            <p className="text-sm text-slate-500 font-medium italic">Pending follow-ups</p>
+                            <p className="text-sm text-[var(--text-muted)] font-medium italic">Pending follow-ups</p>
                         </div>
                         <Calendar className="w-5 h-5 text-emerald-500" />
                     </div>
@@ -293,17 +313,17 @@ const DashboardHome = () => {
                         {upcomingReminders.length > 0 ? upcomingReminders.map((rem, idx) => (
                             <div key={idx} className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer group" onClick={() => navigate('/leads')}>
                                 <div className="flex justify-between items-start mb-2">
-                                    <h4 className="text-sm font-bold text-white truncate group-hover:text-emerald-500 transition-colors">{rem.name}</h4>
+                                    <h4 className="text-sm font-bold text-[var(--text-main)] truncate group-hover:text-emerald-500 transition-colors">{rem.name}</h4>
                                     <span className="text-[10px] font-black text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-lg whitespace-nowrap">
                                         {new Date(rem.reminderDate).toLocaleDateString()}
                                     </span>
                                 </div>
-                                <p className="text-xs text-slate-400 font-medium truncate italic">{rem.course}</p>
+                                <p className="text-xs text-[var(--text-muted)] font-medium truncate italic">{rem.course}</p>
                             </div>
                         )) : (
                             <div className="py-10 text-center">
                                 <Clock className="w-8 h-8 text-slate-700 mx-auto mb-2" />
-                                <p className="text-xs text-slate-500 font-bold">No reminders scheduled</p>
+                                <p className="text-xs text-[var(--text-muted)] font-bold">No reminders scheduled</p>
                             </div>
                         )}
                     </div>
@@ -315,11 +335,11 @@ const DashboardHome = () => {
                 {/* Recent Activity Table */}
                 <div className="lg:col-span-2 glass-card p-8">
                     <div className="flex items-center justify-between mb-8">
-                        <h3 className="text-lg font-bold text-white">Recent Activity Feed</h3>
+                        <h3 className="text-lg font-bold text-[var(--text-main)]">Recent Activity Feed</h3>
                         <button onClick={() => navigate('/leads')} className="text-xs font-bold text-emerald-500 hover:text-emerald-400">View All</button>
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="custom-table text-white">
+                        <table className="custom-table text-[var(--text-main)]">
                             <thead>
                                 <tr className="header-row">
                                     <th>Student</th>
@@ -335,15 +355,15 @@ const DashboardHome = () => {
                                             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 font-bold text-xs ring-1 ring-emerald-500/20">
                                                 {activity.name.charAt(0)}
                                             </div>
-                                            <span className="text-sm font-bold text-white whitespace-nowrap uppercase">{activity.name}</span>
+                                            <span className="text-sm font-bold text-[var(--text-main)] whitespace-nowrap uppercase">{activity.name}</span>
                                         </td>
-                                        <td className="text-sm text-slate-400 font-medium">{activity.course}</td>
+                                        <td className="text-sm text-[var(--text-muted)] font-medium">{activity.course}</td>
                                         <td>
                                             <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${activity.isAdmitted ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
                                                 {activity.isAdmitted ? 'ENROLLED' : activity.reply.toUpperCase()}
                                             </span>
                                         </td>
-                                        <td className="text-sm text-slate-500 font-medium whitespace-nowrap">
+                                        <td className="text-sm text-[var(--text-muted)] font-medium whitespace-nowrap">
                                             {new Date(activity.createdAt).toLocaleDateString()}
                                         </td>
                                     </tr>
@@ -354,20 +374,43 @@ const DashboardHome = () => {
                 </div>
 
                 {/* Course Popularity Bar Chart */}
-                <div className="glass-card p-8 text-white">
+                <div className="glass-card p-8 text-[var(--text-main)]">
                     <div className="mb-8">
-                        <h3 className="text-lg font-bold">Popular Facilities</h3>
-                        <p className="text-sm text-slate-500 font-medium whitespace-nowrap">Student distribution across top 5</p>
+                        <h3 className="text-lg font-bold">Interest by Course</h3>
+                        <p className="text-sm text-[var(--text-muted)] font-medium whitespace-nowrap">Current term distribution</p>
                     </div>
                     <div className="h-[280px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={courseData}>
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} dy={10} />
+                            <BarChart data={courseData} margin={{ bottom: 20 }}>
+                                <XAxis
+                                    dataKey="name"
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }}
+                                    dy={10}
+                                    interval={0}
+                                    tickFormatter={(val) => {
+                                        const map = {
+                                            'Fullstack AI & ML': 'AI',
+                                            'DevOps Engineering': 'Dev',
+                                            'Data Science': 'DS',
+                                            'Cyber Security': 'Sec',
+                                            'UI/UX Design': 'UI',
+                                            'Digital Marketing': 'DM',
+                                            'Python Summer Coding': 'Py'
+                                        };
+                                        return map[val] || val.substring(0, 3).toUpperCase();
+                                    }}
+                                />
                                 <YAxis hide={true} />
-                                <Tooltip contentStyle={{ backgroundColor: '#121816', border: 'none', borderRadius: '12px' }} />
-                                <Bar dataKey="count" radius={[8, 8, 8, 8]} barSize={24}>
+                                <Tooltip
+                                    cursor={{ fill: 'transparent' }}
+                                    contentStyle={{ backgroundColor: '#121816', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                                    itemStyle={{ color: '#fff', fontSize: '12px' }}
+                                />
+                                <Bar dataKey="count" radius={[50, 50, 50, 50]} barSize={40}>
                                     {courseData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={index === 0 ? '#22c55e' : 'rgba(255,255,255,0.05)'} />
+                                        <Cell key={`cell-${index}`} fill={index === 0 ? '#10b981' : '#1e293b'} style={{ transition: 'all 0.3s ease' }} className="hover:opacity-80" />
                                     ))}
                                 </Bar>
                             </BarChart>
@@ -381,19 +424,19 @@ const DashboardHome = () => {
                 <form onSubmit={handleQuickAdmit} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Name</label>
+                            <label className="text-[10px] font-black text-[var(--text-muted)] uppercase ml-1">Name</label>
                             <input className="input-field" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Phone</label>
+                            <label className="text-[10px] font-black text-[var(--text-muted)] uppercase ml-1">Phone</label>
                             <input className="input-field" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} required />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Email</label>
+                            <label className="text-[10px] font-black text-[var(--text-muted)] uppercase ml-1">Email</label>
                             <input className="input-field" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Course</label>
+                            <label className="text-[10px] font-black text-[var(--text-muted)] uppercase ml-1">Course</label>
                             <select className="input-field" value={formData.course} onChange={(e) => setFormData({ ...formData, course: e.target.value })} required>
                                 <option value="">Select Course</option>
                                 {courses.map(c => <option key={c._id} value={c.name}>{c.name}</option>)}
@@ -401,7 +444,7 @@ const DashboardHome = () => {
                         </div>
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Initial Status</label>
+                        <label className="text-[10px] font-black text-[var(--text-muted)] uppercase ml-1">Initial Status</label>
                         <select className="input-field" value={formData.reply} onChange={(e) => setFormData({ ...formData, reply: e.target.value })}>
                             <option value="Interested">Interested</option>
                             <option value="Follow-up">Follow-up</option>
@@ -409,7 +452,7 @@ const DashboardHome = () => {
                         </select>
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Follow-up Date (Optional)</label>
+                        <label className="text-[10px] font-black text-[var(--text-muted)] uppercase ml-1">Follow-up Date (Optional)</label>
                         <input
                             type="date"
                             className="input-field"
@@ -430,7 +473,7 @@ const DashboardHome = () => {
                         <div className="p-6 rounded-3xl bg-white/5 border border-white/5">
                             <div className="flex justify-between items-start mb-6">
                                 <div>
-                                    <h3 className="text-2xl font-black text-white">{selectedStudent.name}</h3>
+                                    <h3 className="text-2xl font-black text-[var(--text-main)]">{selectedStudent.name}</h3>
                                     <p className="text-emerald-500 font-bold text-sm tracking-widest uppercase">{selectedStudent.course}</p>
                                 </div>
                                 <span className={`px-4 py-1.5 rounded-full text-xs font-black ${selectedStudent.isAdmitted ? 'bg-emerald-500 text-black' : 'bg-amber-500/20 text-amber-500'}`}>
@@ -439,16 +482,16 @@ const DashboardHome = () => {
                             </div>
                             <div className="grid grid-cols-2 gap-6">
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-500 uppercase mb-1">Phone Reference</p>
-                                    <p className="text-white font-bold">{selectedStudent.phone || 'N/A'}</p>
+                                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase mb-1">Phone Reference</p>
+                                    <p className="text-[var(--text-main)] font-bold">{selectedStudent.phone || 'N/A'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-500 uppercase mb-1">Email Channel</p>
-                                    <p className="text-white font-bold">{selectedStudent.email || 'N/A'}</p>
+                                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase mb-1">Email Channel</p>
+                                    <p className="text-[var(--text-main)] font-bold">{selectedStudent.email || 'N/A'}</p>
                                 </div>
                                 <div className="col-span-2">
-                                    <p className="text-[10px] font-black text-slate-500 uppercase mb-1">Additional Intelligence</p>
-                                    <p className="text-slate-400 text-sm italic">"{selectedStudent.additionalInfo || 'No additional data points recorded for this entry.'}"</p>
+                                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase mb-1">Additional Intelligence</p>
+                                    <p className="text-[var(--text-muted)] text-sm italic">"{selectedStudent.additionalInfo || 'No additional data points recorded for this entry.'}"</p>
                                 </div>
                             </div>
                         </div>

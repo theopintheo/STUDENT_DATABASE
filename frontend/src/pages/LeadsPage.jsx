@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Plus, Filter, Download, Edit2, Trash2, Eye, UserPlus, GraduationCap, Banknote, Sparkles, CheckCircle2, Wallet, Check, X, Calendar, MapPin, Activity, DollarSign, Award, Users } from 'lucide-react';
 import Modal from '../components/Modal';
 import { studentAPI, courseAPI } from '../api';
@@ -14,7 +14,7 @@ const LeadsPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
 
     // Filter States
-    const [activeTab, setActiveTab] = useState('All Leads');
+    const [activeTab, setActiveTab] = useState('Interested');
     const [courseFilter, setCourseFilter] = useState('All Courses');
     const [dateFilter, setDateFilter] = useState('All Time');
 
@@ -38,10 +38,15 @@ const LeadsPage = () => {
         referredBy: ''
     });
 
+    const location = useLocation();
+
     useEffect(() => {
         fetchStudents();
         fetchCourses();
-    }, []);
+        if (location.state?.activeTab) {
+            setActiveTab(location.state.activeTab);
+        }
+    }, [location.state]);
 
     const fetchStudents = async () => {
         try {
@@ -66,9 +71,12 @@ const LeadsPage = () => {
         }
     };
 
-    // Reset page on filter change (if pagination existed)
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 8;
+
+    // Reset page on filter change
     useEffect(() => {
-        // Reset logic if needed
+        setCurrentPage(1);
     }, [searchTerm, activeTab, courseFilter, dateFilter]);
 
     const handleAdd = () => {
@@ -171,7 +179,12 @@ const LeadsPage = () => {
         return matchesSearch && matchesTab && matchesCourse && matchesDate;
     });
 
-    const categories = ['All Leads', 'Interested', 'Follow-up', 'Not Interested', 'Busy'];
+    const indexOfLastStudent = currentPage * itemsPerPage;
+    const indexOfFirstStudent = indexOfLastStudent - itemsPerPage;
+    const currentStudents = filteredStudents.slice(indexOfFirstStudent, indexOfLastStudent);
+    const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+
+    const categories = ['Interested', 'Follow-up', 'Not Interested', 'Busy'];
     // Sort courses alphabetically for better UX
     const sortedCourses = [...coursesList].sort((a, b) => a.name.localeCompare(b.name));
     const filterCourseOptions = ['All Courses', ...sortedCourses.map(c => c.name)];
@@ -230,15 +243,21 @@ const LeadsPage = () => {
 
             {/* Status Tabs */}
             <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                {categories.map(category => (
-                    <button
-                        key={category}
-                        onClick={() => setActiveTab(category)}
-                        className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wide whitespace-nowrap transition-all ${activeTab === category ? 'bg-emerald-500 text-black font-black shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'bg-[#131b18] border border-white/5 text-slate-400 hover:text-white hover:border-white/10'}`}
-                    >
-                        {category}
-                    </button>
-                ))}
+                {categories.map(category => {
+                    const count = students.filter(s => category === 'All Leads' ? true : s.reply === category).length;
+                    return (
+                        <button
+                            key={category}
+                            onClick={() => setActiveTab(category)}
+                            className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wide whitespace-nowrap transition-all flex items-center gap-2 ${activeTab === category ? 'bg-emerald-500 text-black font-black shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'bg-[#131b18] border border-white/5 text-slate-400 hover:text-white hover:border-white/10'}`}
+                        >
+                            {category}
+                            <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${activeTab === category ? 'bg-black/20 text-black' : 'bg-white/10 text-slate-300'}`}>
+                                {count}
+                            </span>
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Premium Table Container */}
@@ -259,7 +278,7 @@ const LeadsPage = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {filteredStudents.length > 0 ? filteredStudents.map((student) => (
+                            {currentStudents.length > 0 ? currentStudents.map((student) => (
                                 <tr key={student._id} className="hover:bg-white/[0.02] transition-colors group">
                                     <td className="px-6 py-6">
                                         <div className="w-5 h-5 rounded-full border-2 border-white/10 group-hover:border-emerald-500/50 transition-all cursor-pointer" />
@@ -312,24 +331,56 @@ const LeadsPage = () => {
                 </div>
 
                 {/* Pagination UI */}
-                <div className="px-8 py-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/[0.01]">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                        Showing 1 to {filteredStudents.length} of {students.length} entries
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <button className="p-2 text-slate-500 hover:text-white transition-all cursor-pointer">
-                            <X className="w-3.5 h-3.5 rotate-90" /> {/* Chevron Left proxy */}
-                        </button>
-                        <button className="w-8 h-8 rounded-full bg-emerald-500 text-black flex items-center justify-center text-[11px] font-black">1</button>
-                        <button className="w-8 h-8 rounded-full hover:bg-white/5 text-slate-500 flex items-center justify-center text-[11px] font-bold transition-all">2</button>
-                        <button className="w-8 h-8 rounded-full hover:bg-white/5 text-slate-500 flex items-center justify-center text-[11px] font-bold transition-all">3</button>
-                        <span className="text-slate-500 text-xs px-1">...</span>
-                        <button className="w-8 h-8 rounded-full hover:bg-white/5 text-slate-500 flex items-center justify-center text-[11px] font-bold transition-all">10</button>
-                        <button className="p-2 text-slate-500 hover:text-white transition-all cursor-pointer">
-                            <X className="w-3.5 h-3.5 -rotate-90" /> {/* Chevron Right proxy */}
-                        </button>
+                {filteredStudents.length > 0 && (
+                    <div className="px-8 py-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/[0.01]">
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                            Showing {indexOfFirstStudent + 1} to {Math.min(indexOfLastStudent, filteredStudents.length)} of {filteredStudents.length} leads
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                                className="p-2 text-slate-500 hover:text-white transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <X className="w-3.5 h-3.5 rotate-90" />
+                            </button>
+
+                            {/* Simple Pagination Numbers */}
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                // Logic to show sliding window of pages or just first 5 for simplicity
+                                // Let's do a simple sliding window if totalPages > 5
+                                let pNum = i + 1;
+                                if (totalPages > 5 && currentPage > 3) {
+                                    pNum = currentPage - 2 + i;
+                                    // Adjust if we are near the end
+                                    if (pNum > totalPages) pNum = totalPages - (4 - i);
+                                }
+
+                                return (
+                                    <button
+                                        key={pNum}
+                                        onClick={() => setCurrentPage(pNum)}
+                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${currentPage === pNum ? 'bg-emerald-500 text-black' : 'hover:bg-white/5 text-slate-500'}`}
+                                    >
+                                        {pNum}
+                                    </button>
+                                );
+                            })}
+
+                            {totalPages > 5 && currentPage < totalPages - 2 && (
+                                <span className="text-slate-500 text-xs px-1">...</span>
+                            )}
+
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                                className="p-2 text-slate-500 hover:text-white transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <X className="w-3.5 h-3.5 -rotate-90" />
+                            </button>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
 
@@ -402,6 +453,7 @@ const LeadsPage = () => {
                                 <option value="Interested">Interested</option>
                                 <option value="Follow-up">Follow-up</option>
                                 <option value="Not Interested">Not Interested</option>
+                                <option value="Busy">Busy</option>
                             </select>
                         </div>
                     </div>

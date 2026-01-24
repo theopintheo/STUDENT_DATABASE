@@ -10,7 +10,14 @@ const CoursesPage = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [selectedCourse, setSelectedCourse] = useState(null);
-    const [editForm, setEditForm] = useState({ description: '', totalFee: '' });
+    const [editForm, setEditForm] = useState({
+        name: '',
+        courseCode: '',
+        description: '',
+        totalFee: '',
+        durationValue: '',
+        durationUnit: 'months'
+    });
     const [addForm, setAddForm] = useState({
         name: '',
         courseCode: '',
@@ -39,8 +46,12 @@ const CoursesPage = () => {
     const handleEditClick = (course) => {
         setSelectedCourse(course);
         setEditForm({
+            name: course.name || '',
+            courseCode: course.courseCode || '',
             description: course.description || '',
-            totalFee: course.fees?.total || ''
+            totalFee: course.fees?.total || '',
+            durationValue: course.duration?.value || '',
+            durationUnit: course.duration?.unit || 'months'
         });
         setIsEditModalOpen(true);
     };
@@ -49,14 +60,21 @@ const CoursesPage = () => {
         e.preventDefault();
         try {
             await courseAPI.update(selectedCourse._id, {
+                name: editForm.name,
+                courseCode: editForm.courseCode,
                 description: editForm.description,
-                totalFee: editForm.totalFee
+                totalFee: editForm.totalFee,
+                duration: {
+                    value: parseInt(editForm.durationValue),
+                    unit: editForm.durationUnit
+                }
             });
             fetchCourses();
             setIsEditModalOpen(false);
         } catch (err) {
             console.error("Error updating course:", err);
-            alert("Failed to update course");
+            const msg = err.response?.data?.message || "Failed to update course";
+            alert(msg);
         }
     };
 
@@ -176,6 +194,29 @@ const CoursesPage = () => {
             {/* Edit Modal */}
             <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title={`Edit ${selectedCourse?.name}`}>
                 <form onSubmit={handleUpdate} className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Course Name</label>
+                            <input
+                                type="text"
+                                className="input-field"
+                                value={editForm.name}
+                                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Course Code</label>
+                            <input
+                                type="text"
+                                className="input-field"
+                                value={editForm.courseCode}
+                                onChange={(e) => setEditForm({ ...editForm, courseCode: e.target.value })}
+                                required
+                            />
+                        </div>
+                    </div>
+
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-slate-500 uppercase ml-1">Description</label>
                         <textarea
@@ -186,15 +227,38 @@ const CoursesPage = () => {
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Total Fee (₹)</label>
-                        <input
-                            type="number"
-                            className="input-field"
-                            value={editForm.totalFee}
-                            onChange={(e) => setEditForm({ ...editForm, totalFee: e.target.value })}
-                            required
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Total Fee (₹)</label>
+                            <input
+                                type="number"
+                                className="input-field"
+                                value={editForm.totalFee}
+                                onChange={(e) => setEditForm({ ...editForm, totalFee: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Duration</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    className="input-field flex-1"
+                                    value={editForm.durationValue}
+                                    onChange={(e) => setEditForm({ ...editForm, durationValue: e.target.value })}
+                                    required
+                                />
+                                <select
+                                    className="input-field"
+                                    value={editForm.durationUnit}
+                                    onChange={(e) => setEditForm({ ...editForm, durationUnit: e.target.value })}
+                                >
+                                    <option value="months">Months</option>
+                                    <option value="weeks">Weeks</option>
+                                    <option value="days">Days</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="flex justify-end pt-4 gap-3">
@@ -218,7 +282,7 @@ const CoursesPage = () => {
                                 className="input-field"
                                 value={addForm.name}
                                 onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                                placeholder="e.g., Full Stack Development"
+                                placeholder="e.g., Fullstack AI & ML"
                                 required
                             />
                         </div>
