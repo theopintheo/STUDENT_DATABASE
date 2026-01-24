@@ -23,7 +23,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     };
 
     return (
-        <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0d1210] border-r border-white/5 flex flex-col transition-transform duration-300 transform lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-[var(--bg-sidebar)] border-r border-white/5 flex flex-col transition-transform duration-300 transform lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
             <div className="px-8 py-10">
                 <img src={logo} alt="Logo" className="h-12 w-auto object-contain" />
             </div>

@@ -18,6 +18,17 @@
   --radius-xl: 2rem;
 }
 
+[data-theme="light"] {
+  --bg-main: #f8fafc;
+  --bg-sidebar: #ffffff;
+  --bg-surface: #f1f5f9;
+  --bg-card: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --primary-glow: rgba(34, 197, 94, 0.2);
+}
+
 /* Base Styles */
 body {
   margin: 0;

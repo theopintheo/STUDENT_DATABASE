@@ -10,9 +10,8 @@ const updateCourseNames = async () => {
 
         // Map old names or variations to new standardized names
         const updates = [
-            { old: 'Full Stack Development', new: 'Full Stack Web Development' },
-            { old: 'Data Science', new: 'Data Science with Python' },
-            { old: 'Digital Marketing', new: 'Mobile App Development' } // Mapping for demo purposes if needed
+            { old: 'Full Stack Development', new: 'Fullstack AI & ML' },
+            { old: 'Full Stack Dev', new: 'DevOps Engineering' }
         ];
 
         for (const mapping of updates) {

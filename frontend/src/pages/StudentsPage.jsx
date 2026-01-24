@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Eye, Calendar, DollarSign, Award, Users, Download, Filter, ChevronDown, Phone, Mail, ChevronLeft, ChevronRight, Activity, MapPin, UserPlus, CheckCircle } from 'lucide-react';
-import Link from 'react-router-dom'; // Assuming Link is used somewhere or just keeping imports clean
+import { Link } from 'react-router-dom'; // Assuming Link is used somewhere or just keeping imports clean
 import Modal from '../components/Modal';
 import { studentAPI, courseAPI } from '../api';
 
@@ -257,7 +257,7 @@ const StudentsPage = () => {
 
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div>
-                        <h1 className="text-4xl font-black text-white tracking-tight">Joined Student Details</h1>
+                        <h1 className="text-4xl font-black text-white tracking-tight">Student Details</h1>
                         <p className="text-slate-500 mt-2 font-medium max-w-2xl">Manage and track all enrolled student information, payment status, and referral details.</p>
                     </div>
 
@@ -685,12 +685,12 @@ const StudentsPage = () => {
                                             <p className="text-[10px] font-black text-slate-600 uppercase mb-2 text-center sm:text-left">Total Fee</p>
                                             <p className="text-2xl font-black text-white text-center sm:text-left">₹{selectedStudent.fee?.toLocaleString()}</p>
                                         </div>
-                                        <div className="flex-1 p-5 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 relative group">
+                                        {/* <div className="flex-1 p-5 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 relative group">
                                             <p className="text-[10px] font-black text-emerald-500/60 uppercase mb-2 flex items-center justify-center sm:justify-start gap-1">
                                                 Fee to Pay <Activity className="w-2 h-2" />
                                             </p>
                                             <p className="text-2xl font-black text-emerald-400 text-center sm:text-left">₹{(selectedStudent.fee * 0.25).toLocaleString()} <span className="text-[10px] text-emerald-500/50">(Pending)</span></p>
-                                        </div>
+                                        </div> */}
                                     </div>
 
                                     {/* Referral Info */}

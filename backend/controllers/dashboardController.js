@@ -1,4 +1,5 @@
 const Student = require('../models/Student');
+const Course = require('../models/Course');
 
 exports.getStats = async (req, res) => {
     try {
@@ -10,6 +11,7 @@ exports.getStats = async (req, res) => {
 
         // Detailed Status Breakdown
         const statusBreakdown = await Student.aggregate([
+            { $match: { isAdmitted: false } },
             { $group: { _id: '$reply', count: { $sum: 1 } } }
         ]);
 
@@ -49,14 +51,23 @@ exports.getStats = async (req, res) => {
 
         // Course distribution data
         const courseDistribution = await Student.aggregate([
-            { $group: { _id: '$course', count: { $sum: 1 } } },
-            { $sort: { count: -1 } }
+            { $group: { _id: '$course', count: { $sum: 1 } } }
         ]);
 
-        const studentData = courseDistribution.slice(0, 5).map(item => ({
-            name: item._id,
-            count: item.count
+        const allCoursesList = await Course.find({}, 'name');
+
+        const distributionMap = {};
+        courseDistribution.forEach(item => {
+            if (item._id) distributionMap[item._id] = item.count;
+        });
+
+        const studentData = allCoursesList.map(course => ({
+            name: course.name,
+            count: distributionMap[course.name] || 0
         }));
+
+        // Sort by count descending
+        studentData.sort((a, b) => b.count - a.count);
 
         // Enrollment Trends (Weekly)
         const sixWeeksAgo = new Date();
@@ -102,7 +113,7 @@ exports.getStats = async (req, res) => {
             upcomingReminders,
             studentData,
             engagementData: finalEngagement,
-            allCourses: courseDistribution.map(c => c._id)
+            allCourses: allCoursesList.map(c => c.name)
         });
     } catch (err) {
         res.status(500).json({ message: err.message });

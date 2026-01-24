@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Book, Edit2, DollarSign, Clock, Users, Save, X } from 'lucide-react';
+import { Search, Book, Edit2, DollarSign, Clock, Users, Save, X, Plus } from 'lucide-react';
 import Modal from '../components/Modal';
 import { courseAPI } from '../api';
 
@@ -8,8 +8,24 @@ const CoursesPage = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [selectedCourse, setSelectedCourse] = useState(null);
-    const [editForm, setEditForm] = useState({ description: '', totalFee: '' });
+    const [editForm, setEditForm] = useState({
+        name: '',
+        courseCode: '',
+        description: '',
+        totalFee: '',
+        durationValue: '',
+        durationUnit: 'months'
+    });
+    const [addForm, setAddForm] = useState({
+        name: '',
+        courseCode: '',
+        description: '',
+        totalFee: '',
+        durationValue: '',
+        durationUnit: 'months'
+    });
 
     useEffect(() => {
         fetchCourses();
@@ -30,8 +46,12 @@ const CoursesPage = () => {
     const handleEditClick = (course) => {
         setSelectedCourse(course);
         setEditForm({
+            name: course.name || '',
+            courseCode: course.courseCode || '',
             description: course.description || '',
-            totalFee: course.fees?.total || ''
+            totalFee: course.fees?.total || '',
+            durationValue: course.duration?.value || '',
+            durationUnit: course.duration?.unit || 'months'
         });
         setIsEditModalOpen(true);
     };
@@ -40,14 +60,51 @@ const CoursesPage = () => {
         e.preventDefault();
         try {
             await courseAPI.update(selectedCourse._id, {
+                name: editForm.name,
+                courseCode: editForm.courseCode,
                 description: editForm.description,
-                totalFee: editForm.totalFee
+                totalFee: editForm.totalFee,
+                duration: {
+                    value: parseInt(editForm.durationValue),
+                    unit: editForm.durationUnit
+                }
             });
             fetchCourses();
             setIsEditModalOpen(false);
         } catch (err) {
             console.error("Error updating course:", err);
-            alert("Failed to update course");
+            const msg = err.response?.data?.message || "Failed to update course";
+            alert(msg);
+        }
+    };
+
+    const handleAddCourse = async (e) => {
+        e.preventDefault();
+        try {
+            await courseAPI.create({
+                name: addForm.name,
+                courseCode: addForm.courseCode,
+                description: addForm.description,
+                fees: { total: parseFloat(addForm.totalFee) },
+                duration: {
+                    value: parseInt(addForm.durationValue),
+                    unit: addForm.durationUnit
+                }
+            });
+            fetchCourses();
+            setIsAddModalOpen(false);
+            setAddForm({
+                name: '',
+                courseCode: '',
+                description: '',
+                totalFee: '',
+                durationValue: '',
+                durationUnit: 'months'
+            });
+        } catch (err) {
+            console.error("Error adding course:", err);
+            const errorMessage = err.response?.data?.message || err.message || "Failed to add course";
+            alert(`Failed to add course: ${errorMessage}`);
         }
     };
 
@@ -66,15 +123,24 @@ const CoursesPage = () => {
                     <p className="text-slate-500 mt-2 font-medium max-w-2xl">Manage course details, descriptions, and fee structures.</p>
                 </div>
 
-                <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
-                    <input
-                        type="text"
-                        placeholder="Search courses..."
-                        className="bg-[#131b18] border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/30 transition-all w-full md:w-64"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+                        <input
+                            type="text"
+                            placeholder="Search courses..."
+                            className="bg-[#131b18] border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/30 transition-all w-full md:w-64"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="px-5 py-3 bg-emerald-500 text-black rounded-xl font-black text-sm hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center gap-2 whitespace-nowrap"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Add Course
+                    </button>
                 </div>
             </div>
 
@@ -128,6 +194,29 @@ const CoursesPage = () => {
             {/* Edit Modal */}
             <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title={`Edit ${selectedCourse?.name}`}>
                 <form onSubmit={handleUpdate} className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Course Name</label>
+                            <input
+                                type="text"
+                                className="input-field"
+                                value={editForm.name}
+                                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Course Code</label>
+                            <input
+                                type="text"
+                                className="input-field"
+                                value={editForm.courseCode}
+                                onChange={(e) => setEditForm({ ...editForm, courseCode: e.target.value })}
+                                required
+                            />
+                        </div>
+                    </div>
+
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-slate-500 uppercase ml-1">Description</label>
                         <textarea
@@ -138,15 +227,38 @@ const CoursesPage = () => {
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Total Fee (₹)</label>
-                        <input
-                            type="number"
-                            className="input-field"
-                            value={editForm.totalFee}
-                            onChange={(e) => setEditForm({ ...editForm, totalFee: e.target.value })}
-                            required
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Total Fee (₹)</label>
+                            <input
+                                type="number"
+                                className="input-field"
+                                value={editForm.totalFee}
+                                onChange={(e) => setEditForm({ ...editForm, totalFee: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Duration</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    className="input-field flex-1"
+                                    value={editForm.durationValue}
+                                    onChange={(e) => setEditForm({ ...editForm, durationValue: e.target.value })}
+                                    required
+                                />
+                                <select
+                                    className="input-field"
+                                    value={editForm.durationUnit}
+                                    onChange={(e) => setEditForm({ ...editForm, durationUnit: e.target.value })}
+                                >
+                                    <option value="months">Months</option>
+                                    <option value="weeks">Weeks</option>
+                                    <option value="days">Days</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="flex justify-end pt-4 gap-3">
@@ -154,6 +266,90 @@ const CoursesPage = () => {
                         <button type="submit" className="btn-primary">
                             <Save className="w-4 h-4" />
                             Save Changes
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Add Course Modal */}
+            <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Add New Course">
+                <form onSubmit={handleAddCourse} className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Course Name</label>
+                            <input
+                                type="text"
+                                className="input-field"
+                                value={addForm.name}
+                                onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                                placeholder="e.g., Fullstack AI & ML"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Course Code</label>
+                            <input
+                                type="text"
+                                className="input-field"
+                                value={addForm.courseCode}
+                                onChange={(e) => setAddForm({ ...addForm, courseCode: e.target.value })}
+                                placeholder="e.g., FSD-101"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Description</label>
+                        <textarea
+                            className="w-full bg-[#0a0f0d] border border-white/10 rounded-xl p-4 text-sm text-white focus:outline-none focus:border-emerald-500/50 min-h-[120px]"
+                            value={addForm.description}
+                            onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
+                            placeholder="Enter course description..."
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Total Fee (₹)</label>
+                            <input
+                                type="number"
+                                className="input-field"
+                                value={addForm.totalFee}
+                                onChange={(e) => setAddForm({ ...addForm, totalFee: e.target.value })}
+                                placeholder="e.g., 50000"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Duration</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    className="input-field flex-1"
+                                    value={addForm.durationValue}
+                                    onChange={(e) => setAddForm({ ...addForm, durationValue: e.target.value })}
+                                    placeholder="6"
+                                    required
+                                />
+                                <select
+                                    className="input-field"
+                                    value={addForm.durationUnit}
+                                    onChange={(e) => setAddForm({ ...addForm, durationUnit: e.target.value })}
+                                >
+                                    <option value="months">Months</option>
+                                    <option value="weeks">Weeks</option>
+                                    <option value="days">Days</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end pt-4 gap-3">
+                        <button type="button" onClick={() => setIsAddModalOpen(false)} className="btn-secondary">Cancel</button>
+                        <button type="submit" className="btn-primary">
+                            <Plus className="w-4 h-4" />
+                            Add Course
                         </button>
                     </div>
                 </form>
